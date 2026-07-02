@@ -371,6 +371,9 @@ export function EditAvdDialog({ avd, gpus, onClose, onSaved }) {
   const isTv = apiLower.includes('tv') || targetLower.includes('tv')
   const isAuto = apiLower.includes('automotive')
 
+  const dedicatedGpu = Array.isArray(gpus) ? (gpus.find(g => g.is_dedicated) || gpus[0]) : null
+  const gpuNameStr = dedicatedGpu ? dedicatedGpu.name : "dedicated GPU"
+
   const [ram, setRam] = useState(avd ? Number(avd.ram) || 4096 : 4096)
   const [cores, setCores] = useState(avd ? Number(avd.cores) || 4 : 4)
   const [gpuMode, setGpuMode] = useState(avd ? avd.gpu || 'auto' : 'auto')
@@ -495,7 +498,7 @@ export function EditAvdDialog({ avd, gpus, onClose, onSaved }) {
           </div>
 
           <div className="alert alert-info" style={{ fontSize: 12 }}>
-            💡 <strong>Auto Mode</strong> is recommended. It automatically selects your dedicated card (NVIDIA RTX 2070 SUPER) and uses DirectX translation on integrated GPUs.
+            💡 <strong>Auto Mode</strong> is recommended. It automatically selects your dedicated card ({gpuNameStr}) and uses DirectX translation on integrated GPUs.
           </div>
 
           <div className="divider" style={{ margin: '8px 0' }} />
