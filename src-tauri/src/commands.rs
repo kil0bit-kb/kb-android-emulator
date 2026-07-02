@@ -1113,6 +1113,7 @@ pub fn launch_avd(
     no_bluetooth: Option<bool>,
     read_only: Option<bool>,
     wipe_data: Option<bool>,
+    show_qt_sidebar: Option<bool>,
     window: Window,
 ) -> CommandResult {
     // Auto-repair Wear OS configuration if it has corrupted phone settings
@@ -1285,11 +1286,12 @@ pub fn launch_avd(
         args.push(flag.to_string());
     }
 
-    // Suppress the Qt layered extended-window panel. On Windows, this panel
-    // can trigger a fatal UpdateLayeredWindowIndirect error when the process
-    // is launched from an installed EXE, causing the emulator to crash and
-    // restart in a loop showing only the boot logo.
-    args.push("-qt-hide-android-settings".to_string());
+    // Suppress the Qt layered extended-window panel unless the user explicitly
+    // enabled it. On Windows, this panel can trigger a fatal
+    // UpdateLayeredWindowIndirect error when launched from an installed EXE.
+    if show_qt_sidebar != Some(true) {
+        args.push("-qt-hide-android-settings".to_string());
+    }
 
     let emulator_cwd = emulator_dir();
     // Spawn the emulator detached and pipe stdout; stderr is null-routed because
