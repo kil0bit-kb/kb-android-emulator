@@ -84,6 +84,7 @@ function parseImageDetails(img) {
     apiLevel,
     androidVer,
     deviceType,
+    typeLabel,
     services,
     shortServices,
     is16k,
@@ -203,8 +204,11 @@ export function SdkManager({ status, refreshStatus }) {
   const platformToolsInstalled = status?.platform_tools_installed;
   const coreToolsReady = emulatorInstalled && platformToolsInstalled;
 
+  // Sanitize the Google package list to prevent null-pointer crashes
+  const validSystemImages = systemImages.filter(img => img && img.id && img.name);
+
   // Filter dynamic images based on active tab and search input
-  const filteredImages = systemImages.filter(img => {
+  const filteredImages = validSystemImages.filter(img => {
     const details = parseImageDetails(img)
     const matchesSearch = img.name.toLowerCase().includes(search.toLowerCase()) || 
                           img.id.toLowerCase().includes(search.toLowerCase());
@@ -390,7 +394,7 @@ export function SdkManager({ status, refreshStatus }) {
 
       {/* ─── Part 1.5: Installed System Images (With Delete Capability) ─── */}
       {(() => {
-        const installedImages = systemImages.filter(img => img.installed || installedList.includes(img.id));
+        const installedImages = validSystemImages.filter(img => img.installed || installedList.includes(img.id));
         if (installedImages.length === 0) return null;
         return (
           <div className="section">
