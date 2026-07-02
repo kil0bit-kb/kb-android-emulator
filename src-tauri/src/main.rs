@@ -68,6 +68,7 @@ fn main() {
             commands::fetch_sdk_packages,
             commands::update_avd_config,
             commands::optimize_guest_apps,
+            commands::get_app_version,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

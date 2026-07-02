@@ -1820,3 +1820,9 @@ pub async fn optimize_guest_apps(window: Window) -> CommandResult {
     let _ = window.emit("log", "✅ All user apps and games fully compiled to native machine code!");
     CommandResult { ok: true, error: None, output: Some("Optimization completed successfully".into()) }
 }
+
+#[tauri::command]
+pub fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+

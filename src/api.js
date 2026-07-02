@@ -55,6 +55,7 @@ export const updateAvdConfig = (opts) => invoke('update_avd_config', {
   dpi: opts.dpi
 })
 export const optimizeGuestApps = () => invoke('optimize_guest_apps')
+export const getAppVersion = () => invoke('get_app_version')
 
 // ─── Event listeners (mirrors Electron's window.api.on) ─────────────────────
 const _unlisten = {}

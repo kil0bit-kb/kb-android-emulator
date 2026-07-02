@@ -1,6 +1,6 @@
 [package]
 name = "kb-android-emulator"
-version = "1.0.0"
+version = "0.1.0-beta"
 description = "KB Android Emulator Manager - Standalone GPU-optimized Android Emulator"
 authors = ["KB"]
 edition = "2021"

@@ -2115,7 +2115,7 @@ dependencies = [
 
 [[package]]
 name = "kb-android-emulator"
-version = "1.0.0"
+version = "0.1.0-beta"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",

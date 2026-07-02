@@ -24,6 +24,12 @@ export default function App() {
     localStorage.getItem('emulator_log_capture') !== 'false'
   )
   const [avds, setAvds] = useState([])
+  const [appVersion, setAppVersion] = useState('0.1.0-beta')
+  
+  useEffect(() => {
+    api.getAppVersion().then(setAppVersion).catch(e => console.error(e))
+  }, [])
+
   const [showCreate, setShowCreate] = useState(false)
   const [editingAvd, setEditingAvd] = useState(null)
   const [status, setStatus] = useState(null)
@@ -206,6 +212,9 @@ export default function App() {
         <div className="titlebar-logo">
           <img src="/icon.png" alt="Logo" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain' }} />
           <span className="app-name" style={{ marginLeft: '8px' }}>KB Android Emulator</span>
+          <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '6px', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.5px' }}>
+            v{appVersion}
+          </span>
         </div>
         <div className="titlebar-spacer" />
 

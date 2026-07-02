@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New Version (e.g. 1.0.0)'
-        required: true
-        default: '1.0.0'
+        description: 'Release Version (e.g., 0.1.0-beta.1). If left blank, it will auto-detect and bump the latest beta pre-release number.'
+        required: false
+        default: ''
 
 jobs:
   release:
@@ -19,6 +19,44 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Determine Version
+        id: get_version
+        shell: pwsh
+        run: |
+          $inputVersion = "${{ github.event.inputs.version }}"
+          if ($inputVersion) {
+            $version = $inputVersion
+          } else {
+            # Try to fetch latest tag from git
+            git fetch --tags
+            $latestTag = git describe --tags --abbrev=0 2>$null
+            Write-Host "Latest Git Tag found: $latestTag"
+            
+            # Match formats like v0.1.0-beta.2 or 0.1.0-beta.2
+            if ($latestTag -and $latestTag -match 'v?(\d+\.\d+\.\d+)-beta\.(\d+)') {
+              $base = $Matches[1]
+              $beta = $Matches[2]
+              $next = [int]$beta + 1
+              $version = "$base-beta.$next"
+            } elseif ($latestTag -and $latestTag -match 'v?(\d+\.\d+\.\d+)') {
+              # If it's a stable tag, append beta.1 to the next patch version
+              $base = $Matches[1]
+              $parts = $base.Split('.')
+              $patch = [int]$parts[2] + 1
+              $version = "$($parts[0]).$($parts[1]).$patch-beta.1"
+            } else {
+              # Fallback if no tags exist
+              $version = "0.1.0-beta.1"
+            }
+          }
+          
+          # Strip 'v' prefix if typed
+          $version = $version -replace '^v', ''
+          
+          # Set as output
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Resolved Target Release Version: $version"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,16 +74,28 @@ jobs:
       - name: Set Version in Project Files
         shell: pwsh
         run: |
-          $version = "${{ github.event.inputs.version }}"
-          if ($version) {
-            # Update package.json version
-            (Get-Content package.json) -replace '"version":\s*"[^"]+"', "`"version`": `"$version`"" | Set-Content package.json
-            
-            # Update tauri.conf.json version
-            (Get-Content src-tauri/tauri.conf.json) -replace '"version":\s*"[^"]+"', "`"version`": `"$version`"" | Set-Content src-tauri/tauri.conf.json
-            
-            Write-Host "Updated project versions to $version"
-          }
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          
+          # Update package.json version
+          (Get-Content package.json) -replace '"version":\s*"[^"]+"', "`"version`": `"$version`"" | Set-Content package.json
+          
+          # Update tauri.conf.json version
+          (Get-Content src-tauri/tauri.conf.json) -replace '"version":\s*"[^"]+"', "`"version`": `"$version`"" | Set-Content src-tauri/tauri.conf.json
+          
+          # Update Cargo.toml version
+          (Get-Content src-tauri/Cargo.toml) -replace 'version\s*=\s*"[^"]+"', "version = `"$version`"" | Set-Content src-tauri/Cargo.toml
+          
+          Write-Host "Updated project configuration versions to $version"
+
+      - name: Commit version bump
+        shell: pwsh
+        run: |
+          $version = "${{ steps.get_version.outputs.VERSION }}"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+          git commit -m "chore: bump version to $version [skip ci]" --allow-empty
+          git push origin main
 
       - name: Install frontend dependencies
         run: npm ci
@@ -55,8 +105,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v${{ github.event.inputs.version }}
-          releaseName: 'KB Android Emulator Manager v${{ github.event.inputs.version }}'
-          releaseBody: '🚀 Standalone GPU-accelerated Android Emulator Manager for Windows.'
+          tagName: v${{ steps.get_version.outputs.VERSION }}
+          releaseName: 'KB Android Emulator Manager v${{ steps.get_version.outputs.VERSION }}'
+          releaseBody: '🚀 Standalone GPU-accelerated Android Emulator Manager for Windows (Beta).'
           releaseDraft: true
-          prerelease: false
+          prerelease: true
