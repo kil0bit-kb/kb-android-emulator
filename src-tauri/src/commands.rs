@@ -15,8 +15,7 @@ extern "system" {
 const PROCESS_SET_INFORMATION: u32 = 0x0200;
 const HIGH_PRIORITY_CLASS: u32 = 0x00000080;
 
-// ─── Global running emulators map ────────────────────────────────────────────
-pub struct RunningEmulators(pub Mutex<HashMap<String, u32>>); // name -> pid
+
 
 use std::sync::OnceLock;
 static RUNNING_AVDS: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
