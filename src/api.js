@@ -45,6 +45,7 @@ export const launchAvd = (opts) => invoke('launch_avd', {
   readOnly: opts.readOnly,
   wipeData: opts.wipeData,
   speedMode: opts.speedMode,
+  rawLaunch: opts.rawLaunch,
 })
 export const stopAvd   = (opts) => invoke('stop_avd', { name: opts.name })
 export const openFolder = (opts) => invoke('open_folder', { folderPath: opts.folderPath })

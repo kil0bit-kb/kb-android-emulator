@@ -3,23 +3,42 @@ import { useToast, ToastContainer, ConsoleLog, Spinner, ProgressBar } from './co
 import { DeviceCard, CreateAvdDialog, EditAvdDialog } from './components/Devices.jsx'
 import { SdkManager } from './components/SdkManager.jsx'
 import { GpuSettings } from './components/GpuSettings.jsx'
+import { Settings } from './components/Settings.jsx'
 import * as api from './api.js'
+import { useTranslation } from 'react-i18next'
 import './index.css'
-
-// ─── Sidebar Nav Items ────────────────────────────────────────────────────────
-const NAV = [
-  { id: 'devices', icon: '📱', label: 'My Devices' },
-  { id: 'sdk',     icon: '📦', label: 'SDK Manager' },
-  { id: 'gpu',     icon: '🎮', label: 'GPU & Performance' },
-  { id: 'setup',   icon: '⚙️',  label: 'Setup / Install' },
-  { id: 'logs',    icon: '📋', label: 'Console Logs' },
-]
 
 export default function App() {
   const { toasts, toast } = useToast()
   const [page, setPage] = useState('setup')
   const [logs, setLogs] = useState([])
   const [emulatorLogs, setEmulatorLogs] = useState({})
+
+  const { t, i18n } = useTranslation()
+  const [emojisEnabled, setEmojisEnabled] = useState(localStorage.getItem('emojis_enabled') !== 'false')
+
+  const changeLang = (newLang) => {
+    i18n.changeLanguage(newLang)
+    localStorage.setItem('app_lang', newLang)
+  }
+
+  const changeEmojisEnabled = (val) => {
+    setEmojisEnabled(val)
+    localStorage.setItem('emojis_enabled', String(val))
+  }
+
+  const emoji = useCallback((symbol) => {
+    return emojisEnabled ? symbol : ''
+  }, [emojisEnabled])
+
+  const NAV = [
+    { id: 'setup',   icon: emoji('⚙️'),  label: t('nav_setup') },
+    { id: 'sdk',     icon: emoji('📦'), label: t('nav_sdk') },
+    { id: 'devices', icon: emoji('📱'), label: t('nav_devices') },
+    { id: 'gpu',     icon: emoji('🎮'), label: t('nav_gpu') },
+    { id: 'logs',    icon: emoji('📋'), label: t('nav_logs') },
+    { id: 'settings',icon: emoji('🛠️'),  label: t('nav_settings') },
+  ]
   const [logCapture, setLogCapture] = useState(
     localStorage.getItem('emulator_log_capture') !== 'false'
   )
@@ -35,6 +54,9 @@ export default function App() {
   const [status, setStatus] = useState(null)
   const [progress, setProgress] = useState({})
   const [installing, setInstalling] = useState({})
+  const [sdkProgress, setSdkProgress] = useState({})
+  const [sdkInstalling, setSdkInstalling] = useState({})
+  const [sdkErrors, setSdkErrors] = useState({})
   const [gpus, setGpus] = useState([])
   const [hypervisor, setHypervisor] = useState(null)
   const [sysInfo, setSysInfo] = useState(null)
@@ -48,6 +70,7 @@ export default function App() {
     })
     const offProgress = api.on('progress', (data) => {
       setProgress(p => ({ ...p, [data.task]: data.pct }))
+      setSdkProgress(p => ({ ...p, [data.task]: data.pct }))
     })
     const offEmulatorLog = api.on('emulator-log', ({ name, line }) => {
       // Only store if capture is enabled — read from localStorage for latest value
@@ -135,6 +158,8 @@ export default function App() {
     }
     const speedMode = speedModeVal !== 'false'
 
+    const rawLaunch = localStorage.getItem(`emulator_raw_launch_${name}`) === 'true'
+
     const result = await api.launchAvd({ 
       name, 
       gpuMode, 
@@ -147,6 +172,7 @@ export default function App() {
       readOnly,
       wipeData,
       speedMode,
+      rawLaunch,
     })
     if (result.ok) {
       toast(`🚀 Launching "${name}"...`, 'info')
@@ -228,13 +254,13 @@ export default function App() {
         {status && (
           <div className="flex gap-2 items-center" style={{ fontSize: 11 }}>
             {allReady
-              ? <span className="badge badge-ok">🟢 Ready</span>
-              : <span className="badge badge-warn">⚠️ Setup Required</span>
+              ? <span className="badge badge-ok">🟢 {t('ready')}</span>
+              : <span className="badge badge-warn">⚠️ {t('setup_required')}</span>
             }
             {avds.filter(a => a.running).length > 0 && (
               <span className="badge badge-running">
                 <span className="dot" />
-                {avds.filter(a => a.running).length} Running
+                {avds.filter(a => a.running).length} {t('running')}
               </span>
             )}
             {/* Log capture quick-toggle — always accessible from any page */}
@@ -282,8 +308,8 @@ export default function App() {
             </div>
           ))}
           <div className="sidebar-footer">
-            KB Android Emulator<br />
-            <span className="text-muted" style={{ fontSize: 10 }}>Powered by Google SDK + Tauri + Rust</span>
+            <a href="https://github.com/kil0bit-kb/kb-android-emulator" target="_blank" rel="noopener noreferrer" className='text-muted text-sm'>KB Android Emulator</a><br />
+            <span className="text-muted" style={{ fontSize: 10 }}>Powered by Google Android SDK, Tauri & React</span>
           </div>
         </aside>
 
@@ -295,41 +321,41 @@ export default function App() {
             <div className="page">
               <div className="page-header flex items-center justify-between">
                 <div>
-                  <h1 className="page-title">My Devices</h1>
-                  <p className="page-subtitle">Create and manage Android Virtual Devices</p>
+                  <h1 className="page-title">{emoji('📱 ')}{t('devices_title')}</h1>
+                  <p className="page-subtitle">{t('devices_subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="btn btn-ghost btn-sm" onClick={refreshAvds}>🔄 Refresh</button>
+                  <button className="btn btn-ghost btn-sm" onClick={refreshAvds}>{emoji('🔄 ')}{t('devices_refresh')}</button>
                   <button 
                     className="btn btn-ghost btn-sm" 
                     onClick={handleOptimizeApps}
                     disabled={optimizing || avds.filter(a => a.running).length === 0}
                     title="Pre-compiles installed games/apps to native machine code to eliminate JIT stuttering. Requires a running emulator."
                   >
-                    {optimizing ? '⚡ Optimizing...' : '⚡ Optimize Games'}
+                    {optimizing ? emoji('⚡ ') + 'Optimizing...' : emoji('⚡ ') + t('devices_optimize')}
                   </button>
                   <button className="btn btn-primary" onClick={() => setShowCreate(true)}
                     disabled={!allReady} id="btn-create-device">
-                    ＋ New Device
+                    {emoji('＋ ')}{t('devices_new')}
                   </button>
                 </div>
               </div>
 
               {!allReady && (
                 <div className="alert alert-warn" style={{ marginBottom: 20 }}>
-                  ⚠️ Setup is incomplete. Go to <strong>Setup / Install</strong> first.
+                  {emoji('⚠️ ')}Setup is incomplete. Go to <strong>Setup / Install</strong> first.
                 </div>
               )}
 
               {avds.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">📱</div>
-                  <div className="empty-title">No Devices Yet</div>
+                  <div className="empty-icon">{emoji('📱')}</div>
+                  <div className="empty-title">{t('devices_empty_title')}</div>
                   <div className="empty-desc">
-                    Create your first Android Virtual Device. Make sure all SDK components are installed first.
+                    {t('devices_empty_desc')}
                   </div>
                   <button className="btn btn-primary" onClick={() => setShowCreate(true)} disabled={!allReady}>
-                    ＋ Create First Device
+                    {emoji('＋ ')}{t('devices_create_first')}
                   </button>
                 </div>
               ) : (
@@ -352,12 +378,22 @@ export default function App() {
           {page === 'sdk' && (
             <div className="page">
               <div className="page-header">
-                <h1 className="page-title">SDK Manager</h1>
-                <p className="page-subtitle">Install Android system images, emulator, and platform tools</p>
+                <h1 className="page-title">{emoji('📦 ')}{t('sdk_title')}</h1>
+                <p className="page-subtitle">{t('sdk_subtitle')}</p>
               </div>
               {status?.cmdline_installed
-                ? <SdkManager logs={logs} status={status} refreshStatus={refreshStatus} />
-                : <div className="alert alert-warn">⚠️ Please install cmdline-tools first from the <strong>Setup</strong> page.</div>
+                ? <SdkManager 
+                    logs={logs} 
+                    status={status} 
+                    refreshStatus={refreshStatus}
+                    progress={sdkProgress}
+                    setProgress={setSdkProgress}
+                    installing={sdkInstalling}
+                    setInstalling={setSdkInstalling}
+                    errors={sdkErrors}
+                    setErrors={setSdkErrors}
+                  />
+                : <div className="alert alert-warn">{emoji('⚠️ ')}Please install cmdline-tools first from the <strong>Setup</strong> page.</div>
               }
             </div>
           )}
@@ -366,8 +402,8 @@ export default function App() {
           {page === 'gpu' && (
             <div className="page">
               <div className="page-header">
-                <h1 className="page-title">GPU & Performance</h1>
-                <p className="page-subtitle">Configure GPU acceleration and virtualization for maximum performance</p>
+                <h1 className="page-title">{emoji('🎮 ')}{t('gpu_title')}</h1>
+                <p className="page-subtitle">{t('gpu_subtitle')}</p>
               </div>
               <GpuSettings 
                 toast={toast} 
@@ -384,18 +420,18 @@ export default function App() {
           {page === 'setup' && (
             <div className="page">
               <div className="page-header">
-                <h1 className="page-title">Setup & Install</h1>
-                <p className="page-subtitle">Download required components to run the Android emulator</p>
+                <h1 className="page-title">{emoji('⚙️ ')}{t('setup_title')}</h1>
+                <p className="page-subtitle">{t('setup_subtitle')}</p>
               </div>
 
               <div className="alert alert-info" style={{ marginBottom: 24 }}>
-                🚀 All components are downloaded from <strong>official Google and Eclipse Temurin servers</strong>. Stored locally in <span className="font-mono">android-sdk/</span> — no global installs.
+                {emoji('🚀 ')}{t('setup_warn')}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
                   {
-                    step: 1, key: 'jdk', icon: '☕',
+                    step: 1, key: 'jdk', icon: emoji('☕'),
                     title: 'Portable OpenJDK 21',
                     desc: 'Eclipse Temurin JDK 21 — required to run sdkmanager and avdmanager. Stored locally, no global install.',
                     size: '~180 MB',
@@ -405,7 +441,7 @@ export default function App() {
                     requires: false,
                   },
                   {
-                    step: 2, key: 'cmdline', icon: '🔧',
+                    step: 2, key: 'cmdline', icon: emoji('🔧'),
                     title: 'Android Command Line Tools',
                     desc: 'Official Google sdkmanager & avdmanager — to install emulator, platform tools, and system images.',
                     size: '~130 MB',
@@ -415,7 +451,7 @@ export default function App() {
                     requires: !status?.jdk_installed,
                   },
                   {
-                    step: 3, key: 'emulator', icon: '🤖',
+                    step: 3, key: 'emulator', icon: emoji('🤖'),
                     title: 'Android Emulator Engine',
                     desc: 'Install via SDK Manager → "emulator" package once cmdline-tools are ready.',
                     size: '~300 MB',
@@ -467,7 +503,7 @@ export default function App() {
                     )}
                     {item.requires && (
                       <div className="alert alert-warn mt-2" style={{ fontSize: 12 }}>
-                        ⚠️ Requires Step {item.step - 1} to be installed first.
+                        {emoji('⚠️ ')}Requires Step {item.step - 1} to be installed first.
                       </div>
                     )}
                   </div>
@@ -482,22 +518,31 @@ export default function App() {
             </div>
           )}
 
+          {/* ─── Settings Page ─── */}
+          {page === 'settings' && (
+            <Settings 
+              emojisEnabled={emojisEnabled}
+              setEmojisEnabled={changeEmojisEnabled}
+              toast={toast}
+            />
+          )}
+
           {/* ─── Logs Page ─── */}
           {page === 'logs' && (
             <div className="page">
               <div className="page-header flex items-center justify-between">
                 <div>
-                  <h1 className="page-title">Console Logs</h1>
-                  <p className="page-subtitle">Live output from SDK operations and emulators</p>
+                  <h1 className="page-title">{emoji('📋 ')}{t('logs_title')}</h1>
+                  <p className="page-subtitle">{t('logs_subtitle')}</p>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => setLogs([])}>🗑️ Clear</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setLogs([])}>{emoji('🗑️ ')}{t('logs_clear')}</button>
               </div>
               <ConsoleLog lines={logs} />
 
               {/* ── Emulator Log Section ── */}
               <div className="divider" style={{ margin: '20px 0 12px' }} />
               <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-                <div className="section-title" style={{ margin: 0 }}>📋 Emulator Log Capture</div>
+                <div className="section-title" style={{ margin: 0 }}>{emoji('📋 ')}{t('logs_capture_title')}</div>
                 <div className="flex gap-2">
                   {Object.keys(emulatorLogs).length > 0 && (
                     <button
@@ -505,7 +550,7 @@ export default function App() {
                       onClick={() => setEmulatorLogs({})}
                       title="Clear all emulator log output"
                     >
-                      🗑️ Clear Log
+                      {emoji('🗑️ ')}Clear Log
                     </button>
                   )}
                   <button
@@ -518,27 +563,27 @@ export default function App() {
                     }}
                     title={logCapture ? 'Click to pause log capture' : 'Click to resume log capture'}
                   >
-                    {logCapture ? '🟢 Capturing' : '🔴 Paused'}
+                    {logCapture ? emoji('🟢 ') + 'Capturing' : emoji('🔴 ') + 'Paused'}
                   </button>
                 </div>
               </div>
 
               {!logCapture && (
                 <div className="alert alert-warn" style={{ marginBottom: 12, fontSize: 13 }}>
-                  ⏸️ Log capture is paused. New emulator output is being discarded. Click <strong>🔴 Paused</strong> to resume.
+                  {emoji('⏸️ ')}{t('logs_paused_warn')}
                 </div>
               )}
 
               {Object.keys(emulatorLogs).length > 0 ? (
                 Object.entries(emulatorLogs).map(([name, lines]) => (
                   <div key={name} style={{ marginBottom: 16 }}>
-                    <div className="card-title" style={{ marginBottom: 8 }}>📱 {name}</div>
+                    <div className="card-title" style={{ marginBottom: 8 }}>{emoji('📱 ')}{name}</div>
                     <ConsoleLog lines={lines} />
                   </div>
                 ))
               ) : (
                 <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>
-                  {logCapture ? 'No emulator log output yet. Launch a device to see its log here.' : 'Log capture is paused.'}
+                  {logCapture ? t('logs_empty') : 'Log capture is paused.'}
                 </div>
               )}
             </div>

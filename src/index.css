@@ -236,6 +236,8 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14p
 .mb-2 { margin-bottom: 6px; }
 .mb-3 { margin-bottom: 10px; }
 .text-sm { font-size: 11px; }
+.text-lg { font-size: 15px; }
+.text-xl { font-size: 17px; }
 .text-muted { color: var(--text-muted); }
 .text-accent { color: var(--text-accent); }
 .text-green { color: var(--text-green); }

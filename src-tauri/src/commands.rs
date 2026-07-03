@@ -169,6 +169,7 @@ pub struct InstallStatus {
     pub avd_dir: String,
     pub sdk_dir: String,
     pub installed_packages: Vec<String>,
+    pub licenses_accepted: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -193,6 +194,7 @@ pub struct CreateAvdOptions {
     pub gpu_mode: String,
     pub screen_resolution: String,
     pub dpi: u32,
+    pub raw_launch: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -489,6 +491,11 @@ pub fn check_install_status() -> InstallStatus {
         }
     }
 
+    let licenses_accepted = {
+        let licenses_dir = sdk_dir().join("licenses");
+        licenses_dir.exists() && std::fs::read_dir(&licenses_dir).map(|mut d| d.next().is_some()).unwrap_or(false)
+    };
+
     InstallStatus {
         jdk_installed: java_exe.map(|p| p.exists()).unwrap_or(false),
         cmdline_installed: cmdline_dir().join("bin").join("sdkmanager.bat").exists(),
@@ -497,6 +504,7 @@ pub fn check_install_status() -> InstallStatus {
         avd_dir: avd_dir().to_string_lossy().to_string(),
         sdk_dir: sdk_dir().to_string_lossy().to_string(),
         installed_packages,
+        licenses_accepted,
     }
 }
 
@@ -949,7 +957,13 @@ pub async fn create_avd(options: CreateAvdOptions, window: Window) -> CommandRes
         .join(format!("{}.avd", sanitized_name))
         .join("config.ini");
 
-    if config_path.exists() {
+    let is_special_device = options.system_image.contains("wear")
+        || options.system_image.contains("android-tv")
+        || options.system_image.contains("google-tv")
+        || options.system_image.contains("android-automotive")
+        || options.system_image.contains("automotive");
+
+    if !is_special_device && !options.raw_launch.unwrap_or(false) && config_path.exists() {
         let mut content = std::fs::read_to_string(&config_path).unwrap_or_default();
         let perf_settings = build_perf_config(&options);
         for (k, v) in &perf_settings {
@@ -1077,46 +1091,54 @@ fn auto_tune_heap_before_launch(name: &str) -> u64 {
             "512"
         };
         
-        let mut heap_exists = false;
-        let mut final_lines = vec![];
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.starts_with("vm.heapSize=") {
-                final_lines.push(format!("vm.heapSize={}", target_heap));
-                heap_exists = true;
-            } else {
-                final_lines.push(line.to_string());
+        let is_special = is_wear || is_tv || is_auto;
+        if !is_special {
+            let mut heap_exists = false;
+            let mut final_lines = vec![];
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("vm.heapSize=") {
+                    final_lines.push(format!("vm.heapSize={}", target_heap));
+                    heap_exists = true;
+                } else {
+                    final_lines.push(line.to_string());
+                }
             }
+            
+            if !heap_exists {
+                final_lines.push(format!("vm.heapSize={}", target_heap));
+            }
+            
+            let _ = std::fs::write(&config_path, final_lines.join("\n"));
         }
-        
-        if !heap_exists {
-            final_lines.push(format!("vm.heapSize={}", target_heap));
-        }
-        
-        let _ = std::fs::write(&config_path, final_lines.join("\n"));
     }
     ram_val
 }
 
-fn auto_repair_wear_os_config(name: &str) {
+fn auto_repair_special_configs(name: &str) {
     let config_path = avd_dir().join(format!("{}.avd", name)).join("config.ini");
     if !config_path.exists() { return; }
     
     if let Ok(content) = std::fs::read_to_string(&config_path) {
-        let mut is_wear = false;
+        let mut is_special = false;
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("tag.id=") {
                 let id = trimmed.split('=').nth(1).unwrap_or("").trim();
-                if id.contains("wear") { is_wear = true; }
+                if id.contains("wear") || id.contains("tv") || id.contains("google-tv") || id.contains("automotive") {
+                    is_special = true;
+                }
             }
             if trimmed.starts_with("image.sysdir.1=") {
                 let sysdir = trimmed.split('=').nth(1).unwrap_or("").trim();
-                if sysdir.contains("wear") { is_wear = true; }
+                if sysdir.contains("wear") || sysdir.contains("android-tv") || sysdir.contains("google-tv") || sysdir.contains("android-automotive") || sysdir.contains("automotive") {
+                    is_special = true;
+                }
             }
         }
         
-        if is_wear {
+        if is_special {
+            // Delete custom overrides that mess up layout/skins
             let mut clean_lines = vec![];
             for line in content.lines() {
                 let trimmed = line.trim();
@@ -1125,16 +1147,13 @@ fn auto_repair_wear_os_config(name: &str) {
                     || trimmed.starts_with("hw.lcd.density=")
                     || trimmed.starts_with("skin.name=")
                     || trimmed.starts_with("skin.path=")
+                    || trimmed.starts_with("hw.gpu.mode=")
+                    || trimmed.starts_with("hw.gpu.enabled=")
+                    || trimmed.starts_with("vm.heapSize=")
                 {
                     continue;
                 }
-                if trimmed.starts_with("hw.cpu.ncore=") {
-                    clean_lines.push("hw.cpu.ncore=1".to_string());
-                } else if trimmed.starts_with("hw.ramSize=") {
-                    clean_lines.push("hw.ramSize=1024".to_string());
-                } else {
-                    clean_lines.push(line.to_string());
-                }
+                clean_lines.push(line.to_string());
             }
             let _ = std::fs::write(&config_path, clean_lines.join("\n"));
         }
@@ -1170,10 +1189,38 @@ pub fn launch_avd(
     read_only: Option<bool>,
     wipe_data: Option<bool>,
     speed_mode: Option<bool>,
+    raw_launch: Option<bool>,
     window: Window,
 ) -> CommandResult {
-    // Auto-repair Wear OS configuration if it has corrupted phone settings
-    auto_repair_wear_os_config(&name);
+    // Detect Device Type
+    let mut is_wear = false;
+    let mut is_tv = false;
+    let mut is_auto = false;
+    let config_path = avd_dir().join(format!("{}.avd", name)).join("config.ini");
+    if config_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&config_path) {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("tag.id=") {
+                    let id = trimmed.split('=').nth(1).unwrap_or("").trim();
+                    if id.contains("wear") { is_wear = true; }
+                    if id.contains("tv") || id.contains("google-tv") { is_tv = true; }
+                    if id.contains("automotive") { is_auto = true; }
+                }
+                if trimmed.starts_with("image.sysdir.1=") {
+                    let sysdir = trimmed.split('=').nth(1).unwrap_or("").trim();
+                    if sysdir.contains("wear") { is_wear = true; }
+                    if sysdir.contains("android-tv") || sysdir.contains("google-tv") { is_tv = true; }
+                    if sysdir.contains("android-automotive") { is_auto = true; }
+                }
+            }
+        }
+    }
+
+    let is_raw = raw_launch.unwrap_or(false) || is_wear || is_tv || is_auto;
+
+    // Auto-repair special configurations (Wear, TV, Auto) if they have corrupted overrides
+    auto_repair_special_configs(&name);
 
     // Clean stale lock files from previous crashes
     clean_stale_locks(&name);
@@ -1215,102 +1262,91 @@ pub fn launch_avd(
     }
 
     let env = build_env();
-    let mut gpu = gpu_mode.unwrap_or_else(|| "auto".to_string());
-    
-    // Normalize to official supported CLI modes: auto, host, software
-    if gpu == "angle_indirect" {
-        gpu = "host".to_string();
-    } else if gpu == "swiftshader_indirect" {
-        gpu = "software".to_string();
-    } else if gpu != "host" && gpu != "software" {
-        gpu = "auto".to_string();
-    }
-    let mut accelerator = accel.unwrap_or_else(|| "whpx".to_string());
-
-    // Map legacy hypervisor selections to unified flags for Android Emulator 36+
-    // Valid values for -accel are now: on, off, auto
-    if accelerator == "whpx" || accelerator == "aehd" || accelerator == "haxm" {
-        accelerator = "on".to_string();
-    }
-
     let avd_home = avd_dir().to_string_lossy().to_string();
 
-    let _ = window.emit(
-        "log",
-        format!("🚀 Launching \"{}\" — GPU={}, accel={}", name, gpu, accelerator),
-    );
+    let mut args = vec![];
 
-    let mut is_wear = false;
-    let mut is_tv = false;
-    let mut is_auto = false;
-    let config_path = avd_dir().join(format!("{}.avd", name)).join("config.ini");
-    if config_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&config_path) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if trimmed.starts_with("tag.id=") {
-                    let id = trimmed.split('=').nth(1).unwrap_or("").trim();
-                    if id.contains("wear") { is_wear = true; }
-                    if id.contains("tv") || id.contains("google-tv") { is_tv = true; }
-                    if id.contains("automotive") { is_auto = true; }
-                }
-                if trimmed.starts_with("image.sysdir.1=") {
-                    let sysdir = trimmed.split('=').nth(1).unwrap_or("").trim();
-                    if sysdir.contains("wear") { is_wear = true; }
-                    if sysdir.contains("android-tv") || sysdir.contains("google-tv") { is_tv = true; }
-                    if sysdir.contains("android-automotive") { is_auto = true; }
-                }
-            }
+    if is_raw {
+        let _ = window.emit(
+            "log",
+            format!("🚀 Launching \"{}\" in RAW / Default Mode...", name),
+        );
+        args.push("-avd".to_string());
+        args.push(name.clone());
+    } else {
+        let mut gpu = gpu_mode.unwrap_or_else(|| "auto".to_string());
+        
+        // Normalize to official supported CLI modes: auto, host, software
+        if gpu == "angle_indirect" {
+            gpu = "host".to_string();
+        } else if gpu == "swiftshader_indirect" {
+            gpu = "software".to_string();
+        } else if gpu != "host" && gpu != "software" {
+            gpu = "auto".to_string();
         }
+        let mut accelerator = accel.unwrap_or_else(|| "whpx".to_string());
+
+        // Map legacy hypervisor selections to unified flags for Android Emulator 36+
+        // Valid values for -accel are now: on, off, auto
+        if accelerator == "whpx" || accelerator == "aehd" || accelerator == "haxm" {
+            accelerator = "on".to_string();
+        }
+
+        let _ = window.emit(
+            "log",
+            format!("🚀 Launching \"{}\" — GPU={}, accel={}", name, gpu, accelerator),
+        );
+
+        let (heap_sz, growth_lim) = if is_wear {
+            ("128m", "64m")
+        } else if is_tv {
+            ("256m", "128m")
+        } else if is_auto {
+            ("512m", "256m")
+        } else if ram_size >= 8192 {
+            ("1024m", "512m")
+        } else {
+            ("512m", "256m")
+        };
+
+        args = vec![
+            "-avd".to_string(),
+            name.clone(),
+            "-gpu".to_string(),
+            gpu,
+            "-accel".to_string(),
+            accelerator,
+            "-feature".to_string(),
+            "Vulkan,GLESDynamicVersion".to_string(),
+            // Always silence verbose guest logcat — huge disk I/O reduction
+            "-logcat".to_string(),
+            "*:S".to_string(),
+            // Opt out of telemetry/metrics — suppresses warning banner + background reporter
+            "-no-metrics".to_string(),
+            // Force guest Android OS overrides to apply on boot using -prop command line switches (prefixed with qemu.)
+            "-prop".to_string(),
+            format!("qemu.dalvik.vm.heapsize={}", heap_sz),
+            "-prop".to_string(),
+            format!("qemu.dalvik.vm.heapgrowthlimit={}", growth_lim),
+            // Optimize TCP socket buffer sizes for network downloads (prefixed with qemu.)
+            "-prop".to_string(),
+            "qemu.net.tcp.buffersize.default=4096,87380,110208,4096,16384,110208".to_string(),
+            "-prop".to_string(),
+            "qemu.net.tcp.buffersize.wifi=262144,524288,1048576,262144,524288,1048576".to_string(),
+            // Use fast Cloudflare DNS to bypass slirp DNS routing latency
+            "-dns-server".to_string(),
+            "1.1.1.1".to_string(),
+            // Use WASAPI for audio output/input on Windows
+            "-audio".to_string(),
+            "wasapi".to_string(),
+        ];
     }
 
-    let (heap_sz, growth_lim) = if is_wear {
-        ("128m", "64m")
-    } else if is_tv {
-        ("256m", "128m")
-    } else if is_auto {
-        ("512m", "256m")
-    } else if ram_size >= 8192 {
-        ("1024m", "512m")
-    } else {
-        ("512m", "256m")
-    };
-
-    let mut args = vec![
-        "-avd".to_string(),
-        name.clone(),
-        "-gpu".to_string(),
-        gpu,
-        "-accel".to_string(),
-        accelerator,
-        "-feature".to_string(),
-        "Vulkan,GLESDynamicVersion".to_string(),
-        // Always silence verbose guest logcat — huge disk I/O reduction
-        "-logcat".to_string(),
-        "*:S".to_string(),
-        // Opt out of telemetry/metrics — suppresses warning banner + background reporter
-        "-no-metrics".to_string(),
-        // Force guest Android OS overrides to apply on boot using -prop command line switches (prefixed with qemu.)
-        "-prop".to_string(),
-        format!("qemu.dalvik.vm.heapsize={}", heap_sz),
-        "-prop".to_string(),
-        format!("qemu.dalvik.vm.heapgrowthlimit={}", growth_lim),
-        // Optimize TCP socket buffer sizes for network downloads (prefixed with qemu.)
-        "-prop".to_string(),
-        "qemu.net.tcp.buffersize.default=4096,87380,110208,4096,16384,110208".to_string(),
-        "-prop".to_string(),
-        "qemu.net.tcp.buffersize.wifi=262144,524288,1048576,262144,524288,1048576".to_string(),
-        // Use fast Cloudflare DNS to bypass slirp DNS routing latency
-        "-dns-server".to_string(),
-        "1.1.1.1".to_string(),
-        // Use WASAPI for audio output/input on Windows
-        "-audio".to_string(),
-        "wasapi".to_string(),
-    ];
-
     if let Some(false) = quick_boot {
-        args.push("-no-snapshot-load".to_string());
-        args.push("-no-snapshot-save".to_string());
+        if !is_raw {
+            args.push("-no-snapshot-load".to_string());
+            args.push("-no-snapshot-save".to_string());
+        }
     }
 
     if let Some(true) = read_only {
@@ -1322,7 +1358,9 @@ pub fn launch_avd(
     }
 
     if let Some(false) = boot_anim {
-        args.push("-no-boot-anim".to_string());
+        if !is_raw {
+            args.push("-no-boot-anim".to_string());
+        }
     }
 
     if let Some(true) = no_camera {

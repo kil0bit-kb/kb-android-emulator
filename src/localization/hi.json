@@ -1,0 +1,56 @@
+{
+  "lang_name": "हिन्दी (IN)",
+  "nav_devices": "मेरे डिवाइस",
+  "nav_sdk": "एसडीके प्रबंधक",
+  "nav_gpu": "जीपीयू और प्रदर्शन",
+  "nav_setup": "सेटअप / इंस्टॉल",
+  "nav_settings": "सेटिंग्स",
+  "nav_logs": "कंसोल लॉग",
+  
+  "devices_title": "मेरे डिवाइस",
+  "devices_subtitle": "एंड्रॉइड वर्चुअल डिवाइस बनाएं और प्रबंधित करें",
+  "devices_refresh": "रीफ्रेश",
+  "devices_optimize": "गेम्स ऑप्टिमाइज़ करें",
+  "devices_new": "नया डिवाइस",
+  "devices_empty_title": "अभी तक कोई डिवाइस नहीं है",
+  "devices_empty_desc": "अपना पहला एंड्रॉइड वर्चुअल डिवाइस बनाएं। सुनिश्चित करें कि पहले सभी एसडीके घटक इंस्टॉल हैं।",
+  "devices_create_first": "पहला डिवाइस बनाएं",
+  
+  "sdk_title": "एसडीके प्रबंधक",
+  "sdk_subtitle": "एंड्रॉइड सिस्टम इमेज, एमुलेटर और प्लेटफॉर्म टूल्स इंस्टॉल करें",
+  
+  "gpu_title": "जीपीयू और प्रदर्शन",
+  "gpu_subtitle": "अधिकतम प्रदर्शन के लिए जीपीयू त्वरण और वर्चुअलाइजेशन कॉन्फ़िगर करें",
+  
+  "setup_title": "सेटअप और इंस्टालेशन",
+  "setup_subtitle": "एंड्रॉइड एमुलेटर चलाने के लिए आवश्यक घटक डाउनलोड करें",
+  "setup_warn": "सभी घटक आधिकारिक Google और Eclipse Temurin सर्वर से डाउनलोड किए जाते हैं। स्थानीय रूप से android-sdk/ में संग्रहीत — कोई वैश्विक इंस्टालेशन नहीं।",
+  
+  "settings_title": "सेटिंग्स",
+  "settings_subtitle": "स्थानीयकरण, इंटरफ़ेस विकल्प और एमुलेटर डिफ़ॉल्ट प्रबंधित करें",
+  "settings_section_interface": "इंटरफ़ेस सेटिंग्स",
+  "settings_lang_label": "भाषा / अनुवाद",
+  "settings_emoji_label": "हर जगह इमोजी",
+  "settings_emoji_desc": "साइडबार, हेडर और लॉग में इमोजी दिखाएं",
+  "settings_section_defaults": "एमुलेटर डिफ़ॉल्ट विकल्प",
+  "settings_accel_label": "डिफ़ॉल्ट त्वरक (Accelerator)",
+  "settings_gpu_label": "डिफ़ॉल्ट जीपीयू मोड",
+  "settings_quickboot_label": "डिफ़ॉल्ट त्वरित बूट",
+  "settings_bootanim_label": "डिफ़ॉल्ट बूट एनीमेशन",
+  "settings_logcapture_label": "डिफ़ॉल्ट लॉग कैप्चर",
+  "settings_logcapture_desc": "बूट होने पर स्वचालित रूप से लॉग कैप्चर करें",
+  "settings_save_btn": "सेटिंग्स सहेजें",
+  
+  "logs_title": "कंसोल लॉग",
+  "logs_subtitle": "एसडीके संचालन और एमुलेटर से लाइव आउटपुट",
+  "logs_clear": "साफ़ करें",
+  "logs_capture_title": "एमुलेटर लॉग कैप्चर",
+  "logs_paused_warn": "लॉग कैप्चर रुका हुआ है। नया एमुलेटर आउटपुट खारिज किया जा रहा है। फिर से शुरू करने के लिए रुके हुए पर क्लिक करें।",
+  "logs_empty": "अभी तक कोई लॉग आउटपुट नहीं है। लॉग देखने के लिए डिवाइस लॉन्च करें।",
+  
+  "ready": "तैयार",
+  "setup_required": "सेटअप आवश्यक",
+  "running": "चल रहा है",
+  "on": "चालू",
+  "off": "बंद"
+}

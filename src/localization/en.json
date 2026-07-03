@@ -1,0 +1,56 @@
+{
+  "lang_name": "English (US)",
+  "nav_devices": "My Devices",
+  "nav_sdk": "SDK Manager",
+  "nav_gpu": "GPU & Performance",
+  "nav_setup": "Setup / Install",
+  "nav_settings": "Settings",
+  "nav_logs": "Console Logs",
+  
+  "devices_title": "My Devices",
+  "devices_subtitle": "Create and manage Android Virtual Devices",
+  "devices_refresh": "Refresh",
+  "devices_optimize": "Optimize Games",
+  "devices_new": "New Device",
+  "devices_empty_title": "No Devices Yet",
+  "devices_empty_desc": "Create your first Android Virtual Device. Make sure all SDK components are installed first.",
+  "devices_create_first": "Create First Device",
+  
+  "sdk_title": "SDK Manager",
+  "sdk_subtitle": "Install Android system images, emulator, and platform tools",
+  
+  "gpu_title": "GPU & Performance",
+  "gpu_subtitle": "Configure GPU acceleration and virtualization for maximum performance",
+  
+  "setup_title": "Setup & Install",
+  "setup_subtitle": "Download required components to run the Android emulator",
+  "setup_warn": "All components are downloaded from official Google and Eclipse Temurin servers. Stored locally in android-sdk/ — no global installs.",
+  
+  "settings_title": "Settings",
+  "settings_subtitle": "Manage localization, interface options, and emulator defaults",
+  "settings_section_interface": "Interface Settings",
+  "settings_lang_label": "Language / Translation",
+  "settings_emoji_label": "Emojis Everywhere",
+  "settings_emoji_desc": "Show emojis in sidebar, headers, and logs",
+  "settings_section_defaults": "Emulator Default Options",
+  "settings_accel_label": "Default Accelerator",
+  "settings_gpu_label": "Default GPU Mode",
+  "settings_quickboot_label": "Default Quick Boot",
+  "settings_bootanim_label": "Default Boot Animation",
+  "settings_logcapture_label": "Default Log Capture",
+  "settings_logcapture_desc": "Automatically capture guest console logs on boot",
+  "settings_save_btn": "Save Settings",
+  
+  "logs_title": "Console Logs",
+  "logs_subtitle": "Live output from SDK operations and emulators",
+  "logs_clear": "Clear",
+  "logs_capture_title": "Emulator Log Capture",
+  "logs_paused_warn": "Log capture is paused. New emulator output is being discarded. Click Paused to resume.",
+  "logs_empty": "No emulator log output yet. Launch a device to see its log here.",
+  
+  "ready": "Ready",
+  "setup_required": "Setup Required",
+  "running": "Running",
+  "on": "ON",
+  "off": "OFF"
+}

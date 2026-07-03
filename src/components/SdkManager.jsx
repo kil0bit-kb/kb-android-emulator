@@ -105,14 +105,20 @@ function parseImageDetails(img) {
   };
 }
 
-export function SdkManager({ status, refreshStatus }) {
-  const [installing, setInstalling] = useState({})
-  const [errors, setErrors] = useState({})
+export function SdkManager({ 
+  status, 
+  refreshStatus,
+  progress,
+  setProgress,
+  installing,
+  setInstalling,
+  errors,
+  setErrors
+}) {
   const [systemImages, setSystemImages] = useState([])
   const [loadingImages, setLoadingImages] = useState(false)
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('stable_playstore')
-  const [progress, setProgress] = useState({})
   const [showCoreDetails, setShowCoreDetails] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState({})
 
@@ -195,15 +201,7 @@ export function SdkManager({ status, refreshStatus }) {
   // Sort groups descending (e.g. API 37 before API 36)
   const sortedGroupKeys = Object.keys(groups).sort((a, b) => Number(b) - Number(a));
 
-  useEffect(() => {
-    const unsubscribe = api.on('progress', (payload) => {
-      const { task, pct } = payload
-      setProgress(s => ({ ...s, [task]: pct }))
-    })
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe()
-    }
-  }, [])
+  // No local progress subscription needed, as progress is now lifted to App.jsx
 
   const loadSdkImages = async () => {
     setLoadingImages(true)
@@ -501,11 +499,13 @@ export function SdkManager({ status, refreshStatus }) {
           </div>
 
           <div className="flex gap-2">
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '5px 10px' }} onClick={acceptLicenses} disabled={!!installing._licenses}>
-              {installing._licenses ? <Spinner size={10} /> : '📜 Accept SDK Licenses'}
-            </button>
+            {!status?.licenses_accepted && (
+              <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '5px 10px' }} onClick={acceptLicenses} disabled={!!installing._licenses}>
+                {installing._licenses ? <Spinner size={10} /> : '📜 Accept SDK Licenses'}
+              </button>
+            )}
             <button className="btn btn-ghost btn-sm" style={{ fontSize: 10, padding: '5px 10px' }} onClick={loadSdkImages} disabled={loadingImages}>
-              {loadingImages ? <Spinner size={10} /> : '🔄 Sync Repo'}
+               {loadingImages ? <Spinner size={10} /> : '🔄 Sync Repo'}
             </button>
           </div>
         </div>

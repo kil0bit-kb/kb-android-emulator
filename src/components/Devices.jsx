@@ -25,19 +25,14 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
     const apiLevel = parseInt(parts[1].replace('android-', ''))
     if (isNaN(apiLevel)) return 'Device'
     
-    const mapping = {
-      37: '17',
-      36: '16',
-      35: '15',
-      34: '14',
-      33: '13',
-      32: '12L',
-      31: '12',
-      30: '11',
-      29: '10',
-      28: '9',
-    };
-    return mapping[apiLevel] || `API_${apiLevel}`
+    if (apiLevel === 32) return '12L'
+    if (apiLevel >= 33) return String(apiLevel - 20)
+    if (apiLevel >= 28) return String(apiLevel - 19)
+    if (apiLevel >= 26) return '8'
+    if (apiLevel >= 24) return '7'
+    if (apiLevel >= 23) return '6'
+    if (apiLevel >= 21) return '5'
+    return `API_${apiLevel}`
   }
 
   const [randId] = useState(() => Math.floor(1000 + Math.random() * 9000))
@@ -48,15 +43,8 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
     const initialImage = installedImages[0] || '';
     let initialName = `Device_${randId}`;
     if (initialImage) {
-      const parts = initialImage.split(';')
-      if (parts.length >= 2) {
-        const apiLevel = parseInt(parts[1].replace('android-', ''))
-        const mapping = {
-          37: '17', 36: '16', 35: '15', 34: '14', 33: '13', 32: '12L', 31: '12', 30: '11', 29: '10', 28: '9'
-        };
-        const ver = mapping[apiLevel] || `API_${apiLevel}`;
-        initialName = `Android_${ver}_Device_${randId}`;
-      }
+      const ver = getAndroidVersion(initialImage);
+      initialName = `Android_${ver}_Device_${randId}`;
     }
 
     return {
@@ -68,6 +56,12 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
   })
   const [creating, setCreating] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const sysLower = form.systemImage.toLowerCase();
+  const isSpecial = sysLower.includes('wear') || 
+                    sysLower.includes('tv') || 
+                    sysLower.includes('automotive') ||
+                    sysLower.includes('google-tv');
 
   const handleSystemImageChange = (val) => {
     const apiLower = val.toLowerCase();
@@ -158,66 +152,68 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
               </select>
             )}
           </div>
-          {form.systemImage.toLowerCase().includes('wear') ? (
+          {isSpecial ? (
             <div className="alert alert-info" style={{ fontSize: 12, marginBottom: 16 }}>
-              ⌚ Smartwatch screens use native circular/square dimensions (390x390). Custom resolutions are locked for Wear OS stability.
+              📺 Wear OS, Android TV, and Automotive emulators use native default configurations. Custom settings (RAM, Cores, Resolution, GPU, DPI, Storage) are managed automatically by the system.
             </div>
           ) : (
-            <div className="form-group">
-              <label className="form-label">Screen Resolution</label>
-              <select className="form-select" value={form.screenResolution} onChange={e => set('screenResolution', e.target.value)}>
-                {RESOLUTIONS.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
-              </select>
-            </div>
+            <>
+              <div className="form-group">
+                <label className="form-label">Screen Resolution</label>
+                <select className="form-select" value={form.screenResolution} onChange={e => set('screenResolution', e.target.value)}>
+                  {RESOLUTIONS.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">GPU Rendering Mode</label>
+                <select className="form-select" value={form.gpuMode} onChange={e => set('gpuMode', e.target.value)}>
+                  {GPU_MODES.map(g => <option key={g.val} value={g.val}>{g.label}</option>)}
+                </select>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  {form.gpuMode === 'auto' && "💡 Recommended: Automatically select the best hardware renderer based on your system setup."}
+                  {form.gpuMode === 'host' && "💡 Force Hardware: Offload all 3D rendering tasks directly to your graphics card (dGPU/iGPU)."}
+                  {form.gpuMode === 'software' && "⚠️ Software Mode: Uses your CPU for graphics. Very slow, use only as a backup."}
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <div className="flex items-center justify-between">
+                    <label className="form-label">RAM</label>
+                    <span className="text-accent font-mono" style={{ fontSize: 13 }}>{form.ram} MB</span>
+                  </div>
+                  <input type="range" min={1024} max={8192} step={512} value={form.ram} onChange={e => set('ram', Number(e.target.value))} />
+                  <div className="flex justify-between text-sm text-muted mt-2"><span>1 GB</span><span>8 GB</span></div>
+                </div>
+                <div className="form-group">
+                  <div className="flex items-center justify-between">
+                    <label className="form-label">CPU Cores</label>
+                    <span className="text-accent font-mono" style={{ fontSize: 13 }}>{form.cores} cores</span>
+                  </div>
+                  <input type="range" min={1} max={8} step={1} value={form.cores} onChange={e => set('cores', Number(e.target.value))} />
+                  <div className="flex justify-between text-sm text-muted mt-2"><span>1</span><span>8</span></div>
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <div className="flex items-center justify-between">
+                    <label className="form-label">Internal Storage</label>
+                    <span className="text-accent font-mono" style={{ fontSize: 13 }}>{(form.storage / 1024).toFixed(0)} GB</span>
+                  </div>
+                  <input type="range" min={2048} max={32768} step={1024} value={form.storage} onChange={e => set('storage', Number(e.target.value))} />
+                </div>
+                <div className="form-group">
+                  <div className="flex items-center justify-between">
+                    <label className="form-label">Screen DPI</label>
+                    <span className="text-accent font-mono" style={{ fontSize: 13 }}>{form.dpi} dpi</span>
+                  </div>
+                  <input type="range" min={120} max={640} step={40} value={form.dpi} onChange={e => set('dpi', Number(e.target.value))} />
+                </div>
+              </div>
+              <div className="alert alert-info" style={{ fontSize: 12 }}>
+                💡 <strong>x86_64 images</strong> run natively on your PC. GPU mode <strong>host</strong> passes your GPU directly to the emulator for maximum performance.
+              </div>
+            </>
           )}
-          <div className="form-group">
-            <label className="form-label">GPU Rendering Mode</label>
-            <select className="form-select" value={form.gpuMode} onChange={e => set('gpuMode', e.target.value)}>
-              {GPU_MODES.map(g => <option key={g.val} value={g.val}>{g.label}</option>)}
-            </select>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-              {form.gpuMode === 'auto' && "💡 Recommended: Automatically select the best hardware renderer based on your system setup."}
-              {form.gpuMode === 'host' && "💡 Force Hardware: Offload all 3D rendering tasks directly to your graphics card (dGPU/iGPU)."}
-              {form.gpuMode === 'software' && "⚠️ Software Mode: Uses your CPU for graphics. Very slow, use only as a backup."}
-            </div>
-          </div>
-          <div className="grid-2">
-            <div className="form-group">
-              <div className="flex items-center justify-between">
-                <label className="form-label">RAM</label>
-                <span className="text-accent font-mono" style={{ fontSize: 13 }}>{form.ram} MB</span>
-              </div>
-              <input type="range" min={1024} max={8192} step={512} value={form.ram} onChange={e => set('ram', Number(e.target.value))} />
-              <div className="flex justify-between text-sm text-muted mt-2"><span>1 GB</span><span>8 GB</span></div>
-            </div>
-            <div className="form-group">
-              <div className="flex items-center justify-between">
-                <label className="form-label">CPU Cores</label>
-                <span className="text-accent font-mono" style={{ fontSize: 13 }}>{form.cores} cores</span>
-              </div>
-              <input type="range" min={1} max={8} step={1} value={form.cores} onChange={e => set('cores', Number(e.target.value))} />
-              <div className="flex justify-between text-sm text-muted mt-2"><span>1</span><span>8</span></div>
-            </div>
-          </div>
-          <div className="grid-2">
-            <div className="form-group">
-              <div className="flex items-center justify-between">
-                <label className="form-label">Internal Storage</label>
-                <span className="text-accent font-mono" style={{ fontSize: 13 }}>{(form.storage / 1024).toFixed(0)} GB</span>
-              </div>
-              <input type="range" min={2048} max={32768} step={1024} value={form.storage} onChange={e => set('storage', Number(e.target.value))} />
-            </div>
-            <div className="form-group">
-              <div className="flex items-center justify-between">
-                <label className="form-label">Screen DPI</label>
-                <span className="text-accent font-mono" style={{ fontSize: 13 }}>{form.dpi} dpi</span>
-              </div>
-              <input type="range" min={120} max={640} step={40} value={form.dpi} onChange={e => set('dpi', Number(e.target.value))} />
-            </div>
-          </div>
-          <div className="alert alert-info" style={{ fontSize: 12 }}>
-            💡 <strong>x86_64 images</strong> run natively on your PC. GPU mode <strong>host</strong> passes your GPU directly to the emulator for maximum performance.
-          </div>
 
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose} disabled={creating}>Cancel</button>
@@ -400,6 +396,7 @@ export function EditAvdDialog({ avd, gpus, onClose, onSaved }) {
   const isWear = apiLower.includes('wear') || targetLower.includes('wear')
   const isTv = apiLower.includes('tv') || targetLower.includes('tv')
   const isAuto = apiLower.includes('automotive')
+  const isSpecial = isWear || isTv || isAuto
 
   const dedicatedGpu = Array.isArray(gpus) ? (gpus.find(g => g.is_dedicated) || gpus[0]) : null
   const gpuNameStr = dedicatedGpu ? dedicatedGpu.name : "dedicated GPU"
@@ -487,55 +484,63 @@ export function EditAvdDialog({ avd, gpus, onClose, onSaved }) {
               🚗 <strong>Android Automotive detected!</strong> Resources clamped (Max 4GB RAM, Max 4 Cores) for optimal dashboard emulation.
             </div>
           )}
-          <div className="form-group">
-            <label className="form-label">GPU Rendering Mode</label>
-            <select className="form-select" value={gpuMode} onChange={e => setGpuMode(e.target.value)}>
-              {GPU_MODES.map(g => <option key={g.val} value={g.val}>{g.label}</option>)}
-            </select>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-              {gpuMode === 'auto' && "💡 Recommended: Automatically select the best hardware renderer based on your system setup."}
-              {gpuMode === 'host' && "💡 Force Hardware: Offload all 3D rendering tasks directly to your graphics card (dGPU/iGPU)."}
-              {gpuMode === 'software' && "⚠️ Software Mode: Uses your CPU for graphics. Very slow, use only as a backup."}
+          {isSpecial ? (
+            <div className="alert alert-info" style={{ fontSize: 12, marginBottom: 16 }}>
+              📺 Wear OS, Android TV, and Automotive emulators use native default configurations. Custom settings (RAM, Cores, Resolution, GPU, DPI) are managed automatically by the system.
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label className="form-label">GPU Rendering Mode</label>
+                <select className="form-select" value={gpuMode} onChange={e => setGpuMode(e.target.value)}>
+                  {GPU_MODES.map(g => <option key={g.val} value={g.val}>{g.label}</option>)}
+                </select>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  {gpuMode === 'auto' && "💡 Recommended: Automatically select the best hardware renderer based on your system setup."}
+                  {gpuMode === 'host' && "💡 Force Hardware: Offload all 3D rendering tasks directly to your graphics card (dGPU/iGPU)."}
+                  {gpuMode === 'software' && "⚠️ Software Mode: Uses your CPU for graphics. Very slow, use only as a backup."}
+                </div>
+              </div>
 
-          <div className="form-group">
-            <label className="form-label">Screen Resolution</label>
-            <select className="form-select" value={resolution} onChange={e => setResolution(e.target.value)}>
-              {RESOLUTIONS.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <div className="flex items-center justify-between">
-              <label className="form-label">Screen Density (DPI)</label>
-              <span className="text-accent font-mono" style={{ fontSize: 13 }}>{dpi} DPI</span>
-            </div>
-            <input type="range" min={160} max={480} step={40} value={dpi} onChange={e => setDpi(Number(e.target.value))} />
-            <div className="flex justify-between text-sm text-muted mt-2"><span>160 (Low)</span><span>480 (High)</span></div>
-          </div>
-          
-          <div className="form-group">
-            <div className="flex items-center justify-between">
-              <label className="form-label">RAM Allocation</label>
-              <span className="text-accent font-mono" style={{ fontSize: 13 }}>{ram} MB</span>
-            </div>
-            <input type="range" min={1024} max={8192} step={512} value={ram} onChange={e => setRam(Number(e.target.value))} />
-            <div className="flex justify-between text-sm text-muted mt-2"><span>1 GB</span><span>8 GB</span></div>
-          </div>
-          
-          <div className="form-group">
-            <div className="flex items-center justify-between">
-              <label className="form-label">CPU Cores</label>
-              <span className="text-accent font-mono" style={{ fontSize: 13 }}>{cores} cores</span>
-            </div>
-            <input type="range" min={1} max={8} step={1} value={cores} onChange={e => setCores(Number(e.target.value))} />
-            <div className="flex justify-between text-sm text-muted mt-2"><span>1</span><span>8</span></div>
-          </div>
+              <div className="form-group">
+                <label className="form-label">Screen Resolution</label>
+                <select className="form-select" value={resolution} onChange={e => setResolution(e.target.value)}>
+                  {RESOLUTIONS.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <div className="flex items-center justify-between">
+                  <label className="form-label">Screen Density (DPI)</label>
+                  <span className="text-accent font-mono" style={{ fontSize: 13 }}>{dpi} DPI</span>
+                </div>
+                <input type="range" min={160} max={480} step={40} value={dpi} onChange={e => setDpi(Number(e.target.value))} />
+                <div className="flex justify-between text-sm text-muted mt-2"><span>160 (Low)</span><span>480 (High)</span></div>
+              </div>
+              
+              <div className="form-group">
+                <div className="flex items-center justify-between">
+                  <label className="form-label">RAM Allocation</label>
+                  <span className="text-accent font-mono" style={{ fontSize: 13 }}>{ram} MB</span>
+                </div>
+                <input type="range" min={1024} max={8192} step={512} value={ram} onChange={e => setRam(Number(e.target.value))} />
+                <div className="flex justify-between text-sm text-muted mt-2"><span>1 GB</span><span>8 GB</span></div>
+              </div>
+              
+              <div className="form-group">
+                <div className="flex items-center justify-between">
+                  <label className="form-label">CPU Cores</label>
+                  <span className="text-accent font-mono" style={{ fontSize: 13 }}>{cores} cores</span>
+                </div>
+                <input type="range" min={1} max={8} step={1} value={cores} onChange={e => setCores(Number(e.target.value))} />
+                <div className="flex justify-between text-sm text-muted mt-2"><span>1</span><span>8</span></div>
+              </div>
 
-          <div className="alert alert-info" style={{ fontSize: 12 }}>
-            💡 <strong>Auto Mode</strong> is recommended. It automatically selects your dedicated card ({gpuNameStr}) and uses DirectX translation on integrated GPUs.
-          </div>
+              <div className="alert alert-info" style={{ fontSize: 12 }}>
+                💡 <strong>Auto Mode</strong> is recommended. It automatically selects your dedicated card ({gpuNameStr}) and uses DirectX translation on integrated GPUs.
+              </div>
+            </>
+          )}
 
           <div className="divider" style={{ margin: '8px 0' }} />
 
