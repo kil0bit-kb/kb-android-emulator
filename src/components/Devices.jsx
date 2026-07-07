@@ -4,11 +4,35 @@ import * as api from '../api.js'
 
 
 const RESOLUTIONS = [
-  { val: '1080x1920', label: 'Full HD 1080×1920 (Phone)' },
-  { val: '1280x720',  label: 'HD 1280×720 (Phone)' },
-  { val: '2340x1080', label: 'FHD+ 2340×1080 (Gaming)' },
-  { val: '1920x1080', label: 'Full HD Landscape 1920×1080' },
-  { val: '2560x1600', label: 'WQXGA 2560×1600 (Tablet)' },
+  // ── Portrait 9:16 ──────────────────────────────────────────
+  { val: '1080x1920', label: '📱 Full HD  1080×1920  — 9:16 Portrait (Flagship Phone)' },
+  { val: '720x1280',  label: '📱 HD       720×1280   — 9:16 Portrait (Standard Phone)' },
+  { val: '1440x2560', label: '📱 QHD      1440×2560  — 9:16 Portrait (High-end Phone)' },
+  { val: '1080x2340', label: '📱 FHD+     1080×2340  — 19.5:9 Portrait (Gaming)' },
+  { val: '1080x2400', label: '📱 FHD+     1080×2400  — 20:9 Portrait (Modern Slim)' },
+  { val: '1440x3200', label: '📱 QHD+     1440×3200  — 20:9 Portrait (Flagship 2024)' },
+  // ── Portrait Other ─────────────────────────────────────────
+  { val: '1170x2532', label: '📱 iPhone-like 1170×2532  — Super Retina (6.1")' },
+  { val: '828x1792',  label: '📱 iPhone-like  828×1792  — Liquid Retina (6.1")' },
+  { val: '1080x2160', label: '📱 FullView  1080×2160  — 18:9 Tall Portrait' },
+  { val: '540x960',   label: '📱 qHD       540×960    — 9:16 Low-end Portrait' },
+  // ── Landscape ──────────────────────────────────────────────
+  { val: '1920x1080', label: '🖥️ Full HD   1920×1080  — 16:9 Landscape' },
+  { val: '1280x720',  label: '🖥️ HD        1280×720   — 16:9 Landscape (TV / Default)' },
+  { val: '2560x1440', label: '🖥️ QHD       2560×1440  — 16:9 Landscape (High-res)' },
+  // ── Tablet / Wide ──────────────────────────────────────────
+  { val: '2560x1600', label: '📟 WQXGA     2560×1600  — 16:10 Tablet Landscape' },
+  { val: '1920x1200', label: '📟 WUXGA     1920×1200  — 16:10 Tablet (10")' },
+  { val: '2048x1536', label: '📟 iPad-like 2048×1536  — 4:3 Tablet (iPad retina)' },
+  { val: '1280x800',  label: '📟 WXGA      1280×800   — 16:10 Small Tablet' },
+  { val: '800x1280',  label: '📟 Portrait Tablet 800×1280  — 8:10 Portrait' },
+  // ── Foldable / Tall ────────────────────────────────────────
+  { val: '884x2208',  label: '📖 Foldable Cover  884×2208  — Slim portrait (Cover Screen)' },
+  { val: '1768x2208', label: '📖 Foldable Unfolded 1768×2208 — Square-ish open layout' },
+  // ── Square ─────────────────────────────────────────────────
+  { val: '1080x1080', label: '⬛ Square    1080×1080  — 1:1 (Instagram / Smartwatch dev)' },
+  // ── Free Size (Custom) ─────────────────────────────────────
+  { val: 'custom',    label: '✏️  Custom / Free Size  — Enter any resolution' },
 ]
 const GPU_MODES = [
   { val: 'auto',     label: 'Auto (Recommended - Best balance for dGPU/iGPU)' },
@@ -51,11 +75,15 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
       name: initialName,
       systemImage: initialImage,
       ram: 4096, cores: 4, storage: 8192,
-      gpuMode: defaultGpu, screenResolution: '1280x720', dpi: 240,
+      gpuMode: defaultGpu, screenResolution: '1080x1920', dpi: 420,
     }
   })
   const [creating, setCreating] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  // Custom free-size state for Create dialog
+  const [customW, setCustomW] = useState('1080')
+  const [customH, setCustomH] = useState('1920')
 
   const sysLower = form.systemImage.toLowerCase();
   const isSpecial = sysLower.includes('wear') || 
@@ -112,6 +140,10 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
 
   const handleCreate = async () => {
     if (!form.name.trim() || !form.systemImage) return
+    // Resolve actual resolution string — handle the custom free-size option
+    const resolvedResolution = form.screenResolution === 'custom'
+      ? `${customW.trim() || '1080'}x${customH.trim() || '1920'}`
+      : form.screenResolution
     setCreating(true)
     const result = await api.createAvd({
       name: form.name,
@@ -120,7 +152,7 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
       cores: form.cores,
       storage: form.storage,
       gpu_mode: form.gpuMode,
-      screen_resolution: form.screenResolution,
+      screen_resolution: resolvedResolution,
       dpi: form.dpi,
     })
     setCreating(false)
@@ -163,6 +195,28 @@ export function CreateAvdDialog({ onClose, onCreated, gpus, status }) {
                 <select className="form-select" value={form.screenResolution} onChange={e => set('screenResolution', e.target.value)}>
                   {RESOLUTIONS.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
                 </select>
+                {form.screenResolution === 'custom' && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                    <input
+                      className="form-input"
+                      type="number" min={240} max={7680}
+                      value={customW}
+                      onChange={e => setCustomW(e.target.value)}
+                      placeholder="Width"
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>×</span>
+                    <input
+                      className="form-input"
+                      type="number" min={240} max={7680}
+                      value={customH}
+                      onChange={e => setCustomH(e.target.value)}
+                      placeholder="Height"
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>px</span>
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">GPU Rendering Mode</label>
@@ -441,14 +495,27 @@ export function EditAvdDialog({ avd, gpus, onClose, onSaved }) {
     return true
   })
 
+  // Custom free-size: if the saved resolution doesn't match any preset, auto-select "custom"
+  const knownVals = RESOLUTIONS.filter(r => r.val !== 'custom').map(r => r.val)
+  const isCurrentCustom = !knownVals.includes(resolution)
+  const initParts = isCurrentCustom ? resolution.split('x') : ['1080', '1920']
+  const [customW, setCustomW] = useState(initParts[0] || '1080')
+  const [customH, setCustomH] = useState(initParts[1] || '1920')
+  // If the current resolution doesn't match a preset, default the selector to 'custom'
+  const [editResolution, setEditResolution] = useState(isCurrentCustom ? 'custom' : resolution)
+
   const handleSave = async () => {
     setSaving(true)
+    // Resolve actual resolution string (handles the custom free-size option)
+    const resolvedResolution = editResolution === 'custom'
+      ? `${customW.trim() || '1080'}x${customH.trim() || '1920'}`
+      : editResolution
     const result = await api.updateAvdConfig({
       name: avd.name,
       cores: String(cores),
       ram: String(ram),
       gpu: gpuMode,
-      resolution,
+      resolution: resolvedResolution,
       dpi: String(dpi)
     })
     setSaving(false)
@@ -504,9 +571,31 @@ export function EditAvdDialog({ avd, gpus, onClose, onSaved }) {
 
               <div className="form-group">
                 <label className="form-label">Screen Resolution</label>
-                <select className="form-select" value={resolution} onChange={e => setResolution(e.target.value)}>
+                <select className="form-select" value={editResolution} onChange={e => setEditResolution(e.target.value)}>
                   {RESOLUTIONS.map(r => <option key={r.val} value={r.val}>{r.label}</option>)}
                 </select>
+                {editResolution === 'custom' && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                    <input
+                      className="form-input"
+                      type="number" min={240} max={7680}
+                      value={customW}
+                      onChange={e => setCustomW(e.target.value)}
+                      placeholder="Width"
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>×</span>
+                    <input
+                      className="form-input"
+                      type="number" min={240} max={7680}
+                      value={customH}
+                      onChange={e => setCustomH(e.target.value)}
+                      placeholder="Height"
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>px</span>
+                  </div>
+                )}
               </div>
               
               <div className="form-group">
