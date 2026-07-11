@@ -451,7 +451,8 @@ export default function App() {
                 hypervisor={hypervisor} 
                 sysInfo={sysInfo} 
                 loading={loadingHardware} 
-                onRescan={refreshHardware} 
+                onRescan={refreshHardware}
+                emojisEnabled={emojisEnabled}
               />
             </div>
           )}

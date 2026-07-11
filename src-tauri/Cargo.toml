@@ -24,8 +24,13 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["stream", "json"] }
 futures-util = "0.3"
-winreg = "0.52"
 which = "6"
 zip = "2"
 dirs = "5"
 anyhow = "1"
+# Cross-platform system information (RAM, CPU) — replaces PowerShell WMI queries
+sysinfo = "0.30"
+
+# Windows-only dependencies
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"

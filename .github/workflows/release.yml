@@ -9,52 +9,103 @@ on:
         default: ''
 
 jobs:
-  release:
+  bump-version:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    runs-on: windows-latest
-
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine Version
         id: get_version
-        shell: pwsh
         run: |
-          $inputVersion = "${{ github.event.inputs.version }}"
-          if ($inputVersion) {
-            $version = $inputVersion
-          } else {
-            # Try to fetch latest tag from git
+          inputVersion="${{ github.event.inputs.version }}"
+          if [ -n "$inputVersion" ]; then
+            version="$inputVersion"
+          else
             git fetch --tags
-            $latestTag = git describe --tags --abbrev=0 2>$null
-            Write-Host "Latest Git Tag found: $latestTag"
+            # Try to get latest tag, default to v0.1.0 if not found
+            latestTag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
+            echo "Latest Git Tag found: $latestTag"
             
-            if ($latestTag -and $latestTag -match 'v?(\d+\.\d+\.\d+)') {
-              $base = $Matches[1]
-              $parts = $base.Split('.')
-              $patch = [int]$parts[2] + 1
-              $version = "$($parts[0]).$($parts[1]).$patch"
-            } else {
-              # Fallback if no tags exist
-              $version = "0.1.0"
-            }
-          }
+            if [[ "$latestTag" =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              major="${BASH_REMATCH[1]}"
+              minor="${BASH_REMATCH[2]}"
+              patch="${BASH_REMATCH[3]}"
+              patch=$((patch + 1))
+              version="$major.$minor.$patch"
+            else
+              version="0.1.0"
+            fi
+          fi
           
-          # Strip 'v' prefix if typed and trim whitespace
-          $version = ($version -replace '^v', '').Trim()
+          # Strip 'v' prefix
+          version=$(echo "$version" | sed 's/^v//' | xargs)
+          echo "VERSION=$version" >> $GITHUB_OUTPUT
+          echo "Resolved Target Release Version: $version"
+
+      - name: Set Version in Project Files
+        run: |
+          version="${{ steps.get_version.outputs.VERSION }}"
           
-          # Set as output safely in UTF-8
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "VERSION=$version"
-          Write-Host "Resolved Target Release Version: $version"
+          # Update package.json version
+          sed -i 's/"version": *"[^"]*"/"version": "'"$version"'"/' package.json
+          
+          # Update tauri.conf.json version
+          sed -i 's/"version": *"[^"]*"/"version": "'"$version"'"/' src-tauri/tauri.conf.json
+          
+          # Update Cargo.toml version
+          sed -i 's/^version *= *"[^"]*"/version = "'"$version"'"/' src-tauri/Cargo.toml
+          
+          echo "Updated project configuration versions to $version"
+
+      - name: Commit version bump
+        run: |
+          version="${{ steps.get_version.outputs.VERSION }}"
+          git config --local user.email "106017926+kil0bit-kb@users.noreply.github.com"
+          git config --local user.name "kil0bit-kb"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+          git commit -m "chore: bump version to $version [skip ci]" --allow-empty
+          
+          # Tag the release commit
+          git tag "v$version"
+          
+          # Push both branch and tags
+          git push origin main
+          git push origin "v$version"
+
+  build-release:
+    needs: bump-version
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/v${{ needs.bump-version.outputs.version }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+
+      - name: Install system dependencies (Linux only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -64,34 +115,6 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Set Version in Project Files
-        shell: pwsh
-        run: |
-          $version = "${{ steps.get_version.outputs.VERSION }}"
-          $version = $version.Trim()
-          
-          # Update package.json version
-          (Get-Content package.json) -replace '"version":\s*"[^"]+"', "`"version`": `"$version`"" | Set-Content package.json
-          
-          # Update tauri.conf.json version
-          (Get-Content src-tauri/tauri.conf.json) -replace '"version":\s*"[^"]+"', "`"version`": `"$version`"" | Set-Content src-tauri/tauri.conf.json
-          
-          # Update Cargo.toml version
-          (Get-Content src-tauri/Cargo.toml) -replace '^version\s*=\s*"[^"]+"', "version = `"$version`"" | Set-Content src-tauri/Cargo.toml
-          
-          Write-Host "Updated project configuration versions to $version"
-
-      - name: Commit version bump
-        shell: pwsh
-        run: |
-          $version = "${{ steps.get_version.outputs.VERSION }}"
-          $version = $version.Trim()
-          git config --local user.email "106017926+kil0bit-kb@users.noreply.github.com"
-          git config --local user.name "kil0bit-kb"
-          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
-          git commit -m "chore: bump version to $version [skip ci]" --allow-empty
-          git push origin main
-
       - name: Install frontend dependencies
         run: npm ci
 
@@ -100,8 +123,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v${{ steps.get_version.outputs.VERSION }}
-          releaseName: 'KB Android Emulator Manager v${{ steps.get_version.outputs.VERSION }}'
-          releaseBody: '🚀 Standalone GPU-accelerated Android Emulator Manager for Windows (Beta).'
+          tagName: v${{ needs.bump-version.outputs.version }}
+          releaseName: 'KB Android Emulator Manager v${{ needs.bump-version.outputs.version }}'
+          releaseBody: '🚀 Standalone GPU-accelerated Android Emulator Manager (Windows, Linux, macOS).'
           releaseDraft: true
           prerelease: true
