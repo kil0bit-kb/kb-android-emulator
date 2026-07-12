@@ -1,4 +1,0 @@
-[build]
-# Redirect the Cargo target directory to a path without spaces.
-# This is required because windres (GNU toolchain) cannot handle spaces in paths.
-target-dir = "F:/kb-emu-target"
