@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CheckCircle2, XCircle, Info, AlertTriangle, Check, ChevronDown } from 'lucide-react'
+import { CheckCircle2, XCircle, Info, AlertTriangle, Check, ChevronDown, AlertTriangle as WarnIcon } from 'lucide-react'
 
 export function useToast() {
   const [toasts, setToasts] = useState([])
@@ -131,5 +131,58 @@ export function Toggle({ value, onChange, label }) {
       <div className={`toggle ${value ? 'on' : ''}`} />
       {label && <span className="toggle-label">{label}</span>}
     </label>
+  )
+}
+
+// ── ConfirmDialog & useConfirm ──────────────────────────────────────────────
+// Tauri 2 with decorations:false silently blocks native window.confirm().
+// Use this hook + component instead to show an in-app modal.
+
+export function useConfirm() {
+  const [state, setState] = useState(null) // { message, resolve }
+
+  const confirm = useCallback((message) => {
+    return new Promise((resolve) => {
+      setState({ message, resolve })
+    })
+  }, [])
+
+  const handleResponse = useCallback((result) => {
+    state?.resolve(result)
+    setState(null)
+  }, [state])
+
+  const dialog = state ? (
+    <ConfirmDialog
+      message={state.message}
+      onConfirm={() => handleResponse(true)}
+      onCancel={() => handleResponse(false)}
+    />
+  ) : null
+
+  return { confirm, dialog }
+}
+
+export function ConfirmDialog({ message, onConfirm, onCancel }) {
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onCancel() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onCancel])
+
+  return (
+    <div className="confirm-overlay" onClick={onCancel}>
+      <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+        <div className="confirm-icon">
+          <WarnIcon size={22} style={{ color: '#fbbf24' }} />
+        </div>
+        <p className="confirm-message">{message}</p>
+        <div className="confirm-actions">
+          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Confirm</button>
+        </div>
+      </div>
+    </div>
   )
 }

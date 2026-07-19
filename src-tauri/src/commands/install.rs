@@ -86,6 +86,9 @@ pub async fn download_file_with_progress(
 ) -> anyhow::Result<()> {
     use futures_util::StreamExt;
 
+    // Reset cancellation flag before starting a fresh download
+    super::set_download_cancelled(false);
+
     let client = reqwest::Client::builder()
         .user_agent("KB-Android-Manager/1.0")
         .redirect(reqwest::redirect::Policy::limited(10))
@@ -99,6 +102,12 @@ pub async fn download_file_with_progress(
     let mut stream = resp.bytes_stream();
 
     while let Some(chunk) = stream.next().await {
+        // Check for cancellation on every chunk
+        if super::is_download_cancelled() {
+            drop(file);
+            let _ = tokio::fs::remove_file(dest).await;
+            anyhow::bail!("Download cancelled by user.");
+        }
         let chunk = chunk?;
         downloaded += chunk.len() as u64;
         tokio::io::AsyncWriteExt::write_all(&mut file, &chunk).await?;
@@ -111,6 +120,13 @@ pub async fn download_file_with_progress(
         }
     }
     Ok(())
+}
+
+// ─── Cancel Download ────────────────────────────────────────────────────────────
+#[tauri::command]
+pub fn cancel_download() -> CommandResult {
+    super::set_download_cancelled(true);
+    CommandResult { ok: true, error: None, output: None }
 }
 
 pub fn extract_zip(zip_path: &Path, dest: &Path) -> anyhow::Result<()> {
@@ -709,3 +725,34 @@ pub async fn fetch_sdk_packages(window: Window) -> Result<Vec<super::types::SdkP
     let _ = window.emit("log", format!("Fetched {} system images from Google repositories.", result.len()));
     Ok(result)
 }
+
+// ─── Uninstall JDK ───────────────────────────────────────────────────────────
+#[tauri::command]
+pub fn uninstall_jdk(window: Window) -> CommandResult {
+    let dir = jdk_dir();
+    let _ = window.emit("log", "Uninstalling JDK...");
+    if dir.exists() {
+        if let Err(e) = std::fs::remove_dir_all(&dir) {
+            return CommandResult { ok: false, error: Some(format!("Failed to delete JDK directory: {}", e)), output: None };
+        }
+    }
+    // Re-create the empty directory so structure is maintained
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = window.emit("log", "JDK uninstalled successfully!");
+    CommandResult { ok: true, error: None, output: None }
+}
+
+// ─── Uninstall cmdline-tools ──────────────────────────────────────────────────
+#[tauri::command]
+pub fn uninstall_cmdline_tools(window: Window) -> CommandResult {
+    let dir = sdk_dir().join("cmdline-tools");
+    let _ = window.emit("log", "Uninstalling cmdline-tools...");
+    if dir.exists() {
+        if let Err(e) = std::fs::remove_dir_all(&dir) {
+            return CommandResult { ok: false, error: Some(format!("Failed to delete cmdline-tools directory: {}", e)), output: None };
+        }
+    }
+    let _ = window.emit("log", "cmdline-tools uninstalled successfully!");
+    CommandResult { ok: true, error: None, output: None }
+}
+

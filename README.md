@@ -1,14 +1,13 @@
 # KB Android Emulator Manager
 
-A modern, standalone desktop application built with **React** and **Tauri v2** to manage, configure, and optimize Android Virtual Devices (AVDs). 
+Modern standalone desktop app built with **React** and **Tauri v2** to manage, configure and optimise Android Virtual Devices (AVDs).
 
-It features advanced auto-tuning, system resource clamping, graphics pipeline selection, and recovery tools to deliver a high-performance, developer-friendly emulator management experience.
+It includes sophisticated auto-tuning, system resource clamping, graphics pipeline selection and recovery tools to deliver a high-performance, developer-friendly emulator management experience.
 
 ---
 
 ## Core Features
 
-*   **Premium Dark Interface:** A sleek, fully responsive dashboard built with custom glassmorphism components, detailed system resource monitors, and real-time log consoles.
 *   **GPU Accelerator Configuration:** Native dropdown controls to toggle between Gfxstream (`auto`), Hardware Passthrough (`host`), and CPU fallback (`software`) rendering pipelines.
 *   **Smart OS Auto-Tuning:** Dynamic configuration locks for specialized system images:
     *   **Wear OS Watches:** Locks resources to 1GB RAM / 1 Core, sets a 128MB Dalvik heap, and strips conflicting resolution properties to guarantee circular watch face layouts boot stably.

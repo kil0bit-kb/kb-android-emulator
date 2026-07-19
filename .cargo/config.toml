@@ -1,4 +1,0 @@
-[build]
-# Keep Cargo's target directory relative to the workspace so the same
-# repository can build consistently across Linux, macOS, and Windows runners.
-target-dir = "target"

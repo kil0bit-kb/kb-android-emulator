@@ -1,0 +1,10 @@
+[build]
+# WINDOWS ONLY — Copy this file to `.cargo/config.toml` (which is gitignored).
+#
+# `windres` (the GNU resource compiler) crashes on paths containing spaces.
+# If your project is cloned into a path with spaces (e.g. "Aevorin Studios"),
+# create `.cargo/config.toml` with a space-free absolute path like below:
+#
+# target-dir = "C:/cargo-targets/kb-android-emulator"
+#
+# Mac/Linux users: you do NOT need this file.

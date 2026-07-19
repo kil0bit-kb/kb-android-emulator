@@ -11,33 +11,36 @@ const appWindow = getCurrentWindow()
 // ─── Window Controls ──────────────────────────────────────────────────────────
 export const minimizeWindow = () => invoke('window_minimize')
 export const maximizeWindow = () => invoke('window_maximize')
-export const closeWindow    = () => invoke('window_close')
+export const closeWindow = () => invoke('window_close')
 
 // ─── System ───────────────────────────────────────────────────────────────────
-export const getSystemInfo      = () => invoke('get_system_info')
-export const detectGpus         = () => invoke('detect_gpus')
-export const setGpuPreference   = (opts) => invoke('set_gpu_preference', { gpuIndex: opts.gpuIndex, gpuPreference: opts.gpuPreference })
-export const checkHypervisor    = () => invoke('check_hypervisor')
-export const enableWhpx         = () => invoke('enable_whpx')
+export const getSystemInfo = () => invoke('get_system_info')
+export const detectGpus = () => invoke('detect_gpus')
+export const setGpuPreference = (opts) => invoke('set_gpu_preference', { gpuIndex: opts.gpuIndex, gpuPreference: opts.gpuPreference })
+export const checkHypervisor = () => invoke('check_hypervisor')
+export const enableWhpx = () => invoke('enable_whpx')
 export const checkInstallStatus = () => invoke('check_install_status')
 
 // ─── Downloads / SDK ──────────────────────────────────────────────────────────
-export const installJdk          = () => invoke('install_jdk')
+export const installJdk = () => invoke('install_jdk')
 export const installCmdlineTools = () => invoke('install_cmdline_tools')
-export const acceptLicenses      = () => invoke('accept_licenses')
-export const installPackage      = (opts) => invoke('install_package', { packageId: opts.packageId })
-export const uninstallPackage    = (opts) => invoke('uninstall_package', { packageId: opts.packageId })
-export const fetchSdkPackages    = () => invoke('fetch_sdk_packages')
+export const uninstallJdk = () => invoke('uninstall_jdk')
+export const uninstallCmdlineTools = () => invoke('uninstall_cmdline_tools')
+export const cancelDownload = () => invoke('cancel_download')
+export const acceptLicenses = () => invoke('accept_licenses')
+export const installPackage = (opts) => invoke('install_package', { packageId: opts.packageId })
+export const uninstallPackage = (opts) => invoke('uninstall_package', { packageId: opts.packageId })
+export const fetchSdkPackages = () => invoke('fetch_sdk_packages')
 
 // ─── AVD Management ───────────────────────────────────────────────────────────
-export const listAvds  = () => invoke('list_avds')
+export const listAvds = () => invoke('list_avds')
 export const createAvd = (opts) => invoke('create_avd', { options: opts })
 export const deleteAvd = (opts) => invoke('delete_avd', { name: opts.name })
-export const launchAvd = (opts) => invoke('launch_avd', { 
-  name: opts.name, 
-  gpuMode: opts.gpuMode, 
-  accel: opts.accel, 
-  quickBoot: opts.quickBoot, 
+export const launchAvd = (opts) => invoke('launch_avd', {
+  name: opts.name,
+  gpuMode: opts.gpuMode,
+  accel: opts.accel,
+  quickBoot: opts.quickBoot,
   bootAnim: opts.bootAnim,
   noCamera: opts.noCamera,
   noGps: opts.noGps,
@@ -47,12 +50,12 @@ export const launchAvd = (opts) => invoke('launch_avd', {
   speedMode: opts.speedMode,
   rawLaunch: opts.rawLaunch,
 })
-export const stopAvd   = (opts) => invoke('stop_avd', { name: opts.name })
+export const stopAvd = (opts) => invoke('stop_avd', { name: opts.name })
 export const openFolder = (opts) => invoke('open_folder', { folderPath: opts.folderPath })
-export const updateAvdConfig = (opts) => invoke('update_avd_config', { 
-  name: opts.name, 
-  cores: opts.cores, 
-  ram: opts.ram, 
+export const updateAvdConfig = (opts) => invoke('update_avd_config', {
+  name: opts.name,
+  cores: opts.cores,
+  ram: opts.ram,
   gpu: opts.gpu,
   resolution: opts.resolution,
   dpi: opts.dpi

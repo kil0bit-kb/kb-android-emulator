@@ -1,24 +1,25 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useToast, ToastContainer, ConsoleLog, Spinner, ProgressBar } from './components/UI.jsx'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { useToast, ToastContainer, ConsoleLog, Spinner, ProgressBar, useConfirm } from './components/UI.jsx'
 import { DeviceCard, CreateAvdDialog, EditAvdDialog } from './components/Devices.jsx'
 import { SdkManager } from './components/SdkManager.jsx'
 import { GpuSettings } from './components/GpuSettings.jsx'
 import { Settings } from './components/Settings.jsx'
 import * as api from './api.js'
 import { useTranslation } from 'react-i18next'
-import { 
-  Sliders, 
-  Package, 
-  Smartphone, 
-  Cpu, 
-  Terminal, 
+import {
+  Sliders,
+  Package,
+  Smartphone,
+  Cpu,
+  Terminal,
   Settings as SettingsIcon,
-  RefreshCw, 
-  Zap, 
-  Plus, 
-  AlertTriangle, 
-  Coffee, 
-  Wrench, 
+  RefreshCw,
+  Zap,
+  Plus,
+  AlertTriangle,
+  Coffee,
+  Wrench,
   Bot,
   Play,
   Pause,
@@ -34,6 +35,7 @@ import './index.css'
 
 export default function App() {
   const { toasts, toast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const [page, setPage] = useState('setup')
   const [logs, setLogs] = useState([])
   const [emulatorLogs, setEmulatorLogs] = useState({})
@@ -46,19 +48,19 @@ export default function App() {
   }
 
   const NAV = [
-    { id: 'setup',   icon: <Sliders size={14} />,  label: t('nav_setup') },
-    { id: 'sdk',     icon: <Package size={14} />, label: t('nav_sdk') },
+    { id: 'setup', icon: <Sliders size={14} />, label: t('nav_setup') },
+    { id: 'sdk', icon: <Package size={14} />, label: t('nav_sdk') },
     { id: 'devices', icon: <Smartphone size={14} />, label: t('nav_devices') },
-    { id: 'gpu',     icon: <Cpu size={14} />, label: t('nav_gpu') },
-    { id: 'logs',    icon: <Terminal size={14} />, label: t('nav_logs') },
-    { id: 'settings',icon: <SettingsIcon size={14} />,  label: t('nav_settings') },
+    { id: 'gpu', icon: <Cpu size={14} />, label: t('nav_gpu') },
+    { id: 'logs', icon: <Terminal size={14} />, label: t('nav_logs') },
+    { id: 'settings', icon: <SettingsIcon size={14} />, label: t('nav_settings') },
   ]
   const [logCapture, setLogCapture] = useState(
     localStorage.getItem('emulator_log_capture') !== 'false'
   )
   const [avds, setAvds] = useState([])
   const [appVersion, setAppVersion] = useState('0.1.0-beta')
-  
+
   useEffect(() => {
     api.getAppVersion().then(setAppVersion).catch(e => console.error(e))
   }, [])
@@ -68,6 +70,7 @@ export default function App() {
   const [status, setStatus] = useState(null)
   const [progress, setProgress] = useState({})
   const [installing, setInstalling] = useState({})
+  const [uninstalling, setUninstalling] = useState({})
   const [sdkProgress, setSdkProgress] = useState({})
   const [sdkInstalling, setSdkInstalling] = useState({})
   const [sdkErrors, setSdkErrors] = useState({})
@@ -76,6 +79,18 @@ export default function App() {
   const [sysInfo, setSysInfo] = useState(null)
   const [loadingHardware, setLoadingHardware] = useState(false)
   const [optimizing, setOptimizing] = useState(false)
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  // ── Track window maximized state ────────────────────────────────────────────
+  useEffect(() => {
+    const win = getCurrentWindow()
+    win.isMaximized().then(setIsMaximized)
+    let unlisten
+    win.onResized(async () => {
+      setIsMaximized(await win.isMaximized())
+    }).then(u => { unlisten = u })
+    return () => { if (unlisten) unlisten() }
+  }, [])
 
   // ── Listen to Tauri backend events ─────────────────────────────────────────
   useEffect(() => {
@@ -165,7 +180,7 @@ export default function App() {
     const noBluetooth = localStorage.getItem('emulator_perf_no_bluetooth') === 'true'
 
     const readOnly = localStorage.getItem(`emulator_ultra_gaming_${name}`) === 'true'
-    
+
     let speedModeVal = localStorage.getItem(`emulator_speed_mode_${name}`)
     if (speedModeVal === null) {
       speedModeVal = localStorage.getItem('emulator_speed_mode')
@@ -174,11 +189,11 @@ export default function App() {
 
     const rawLaunch = localStorage.getItem(`emulator_raw_launch_${name}`) === 'true'
 
-    const result = await api.launchAvd({ 
-      name, 
-      gpuMode, 
-      accel, 
-      quickBoot, 
+    const result = await api.launchAvd({
+      name,
+      gpuMode,
+      accel,
+      quickBoot,
       bootAnim,
       noCamera,
       noGps,
@@ -232,7 +247,13 @@ export default function App() {
     setInstalling(s => ({ ...s, jdk: true }))
     const r = await api.installJdk()
     setInstalling(s => ({ ...s, jdk: false }))
-    toast(r.ok ? 'JDK installed!' : `JDK failed: ${r.error}`, r.ok ? 'success' : 'error')
+    if (r.ok) {
+      toast('JDK installed!', 'success')
+    } else if (r.error && r.error.includes('cancelled')) {
+      toast('Download cancelled.', 'warn')
+    } else {
+      toast(`JDK failed: ${r.error}`, 'error')
+    }
     refreshStatus()
   }
 
@@ -240,7 +261,44 @@ export default function App() {
     setInstalling(s => ({ ...s, cmdline: true }))
     const r = await api.installCmdlineTools()
     setInstalling(s => ({ ...s, cmdline: false }))
-    toast(r.ok ? 'cmdline-tools installed!' : `Failed: ${r.error}`, r.ok ? 'success' : 'error')
+    if (r.ok) {
+      toast('cmdline-tools installed!', 'success')
+    } else if (r.error && r.error.includes('cancelled')) {
+      toast('Download cancelled.', 'warn')
+    } else {
+      toast(`Failed: ${r.error}`, 'error')
+    }
+    refreshStatus()
+  }
+
+  const handleCancelDownload = async (key) => {
+    await api.cancelDownload()
+    // No toast here — the install handler already emits one when it catches the cancelled error
+  }
+
+  const uninstallJdk = async () => {
+    if (!await confirm("Are you sure you want to uninstall Portable OpenJDK 21?\n\nThis will prevent cmdline-tools and emulators from running.")) return
+    setUninstalling(s => ({ ...s, jdk: true }))
+    const r = await api.uninstallJdk()
+    setUninstalling(s => ({ ...s, jdk: false }))
+    if (r.ok) {
+      toast('JDK uninstalled successfully!', 'success')
+    } else {
+      toast(`Failed to uninstall JDK: ${r.error}`, 'error')
+    }
+    refreshStatus()
+  }
+
+  const uninstallCmdline = async () => {
+    if (!await confirm("Are you sure you want to uninstall Android Command Line Tools?")) return
+    setUninstalling(s => ({ ...s, cmdline: true }))
+    const r = await api.uninstallCmdlineTools()
+    setUninstalling(s => ({ ...s, cmdline: false }))
+    if (r.ok) {
+      toast('cmdline-tools uninstalled successfully!', 'success')
+    } else {
+      toast(`Failed to uninstall cmdline-tools: ${r.error}`, 'error')
+    }
     refreshStatus()
   }
 
@@ -276,7 +334,7 @@ export default function App() {
         <div className="titlebar-spacer" />
 
         {status && (
-          <div className="flex gap-2 items-center" style={{ fontSize: 11 }}>
+          <div className="flex gap-2 items-center" style={{ fontSize: 11, WebkitAppRegion: 'no-drag' }}>
             {allReady
               ? <span className="badge badge-ok flex items-center gap-1"><CheckCircle2 size={10} /> {t('ready')}</span>
               : <span className="badge badge-warn flex items-center gap-1"><AlertTriangle size={10} /> {t('setup_required')}</span>
@@ -290,14 +348,14 @@ export default function App() {
             {/* Log capture quick-toggle — always accessible from any page */}
             <span
               id="btn-log-capture-toggle"
-              className={`badge ${logCapture ? 'badge-ok' : 'badge-warn'} flex items-center gap-1`}
+              className={`badge ${logCapture ? 'badge-ok' : 'badge-warn'} flex items-center gap-1 has-tooltip`}
               onClick={() => {
                 const next = !logCapture
                 setLogCapture(next)
                 localStorage.setItem('emulator_log_capture', String(next))
                 toast(next ? 'Emulator log capture ON' : 'Emulator log capture OFF', 'info')
               }}
-              title={logCapture ? 'Log capture ON — click to pause' : 'Log capture OFF — click to resume'}
+              data-tooltip={logCapture ? 'Log capture ON — click to pause' : 'Log capture OFF — click to resume'}
               style={{ cursor: 'pointer', userSelect: 'none' }}
             >
               {logCapture ? <span className="flex items-center gap-1"><Play size={10} />Log ON</span> : <span className="flex items-center gap-1"><Pause size={10} />Log OFF</span>}
@@ -307,13 +365,49 @@ export default function App() {
 
         <div className="titlebar-controls">
           <button className="titlebar-btn titlebar-btn-min" onClick={() => api.minimizeWindow()} title="Minimize" aria-label="Minimize window">
-            <Minus size={12} />
+            <span style={{ fontSize: 14, lineHeight: 1, display: 'block', marginTop: '-2px' }}>&#x2500;</span>
           </button>
-          <button className="titlebar-btn titlebar-btn-max" onClick={() => api.maximizeWindow()} title="Maximize" aria-label="Maximize window">
-            <Square size={11} />
+          <button
+            className="titlebar-btn titlebar-btn-max"
+            onClick={() => api.maximizeWindow()}
+            title={isMaximized ? 'Restore' : 'Maximize'}
+            aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
+          >
+            {isMaximized ? (
+              /* Restore icon: two overlapping rounded squares */
+              <span style={{ position: 'relative', width: 13, height: 13, display: 'block' }}>
+                {/* back square */}
+                <span style={{
+                  position: 'absolute', bottom: 0, right: 0,
+                  width: 9, height: 9,
+                  border: '1.5px solid currentColor',
+                  borderRadius: 2,
+                  display: 'block',
+                  background: 'transparent',
+                }} />
+                {/* front square (top-left offset) */}
+                <span style={{
+                  position: 'absolute', top: 0, left: 0,
+                  width: 9, height: 9,
+                  border: '1.5px solid currentColor',
+                  borderRadius: 2,
+                  display: 'block',
+                  background: 'var(--bg-void)',
+                  borderBottom: '1.5px solid currentColor',
+                }} />
+              </span>
+            ) : (
+              /* Maximize icon: single rounded square */
+              <span style={{
+                fontSize: 11, lineHeight: 1, display: 'block',
+                border: '1.5px solid currentColor',
+                width: 11, height: 11,
+                borderRadius: 2,
+              }} />
+            )}
           </button>
           <button className="titlebar-btn titlebar-btn-close" onClick={() => api.closeWindow()} title="Close" aria-label="Close window">
-            <X size={12} />
+            <span style={{ fontSize: 16, lineHeight: 1, display: 'block' }}>&#x2715;</span>
           </button>
         </div>
       </div>
@@ -362,8 +456,8 @@ export default function App() {
                     <RefreshCw size={12} />
                     {t('devices_refresh')}
                   </button>
-                  <button 
-                    className="btn btn-ghost btn-sm flex items-center gap-1" 
+                  <button
+                    className="btn btn-ghost btn-sm flex items-center gap-1"
                     onClick={handleOptimizeApps}
                     disabled={optimizing || avds.filter(a => a.running).length === 0}
                     title="Pre-compiles installed games/apps to native machine code to eliminate JIT stuttering. Requires a running emulator."
@@ -425,21 +519,21 @@ export default function App() {
                 <p className="page-subtitle">{t('sdk_subtitle')}</p>
               </div>
               {status?.cmdline_installed
-                ? <SdkManager 
-                    logs={logs} 
-                    status={status} 
-                    refreshStatus={refreshStatus}
-                    progress={sdkProgress}
-                    setProgress={setSdkProgress}
-                    installing={sdkInstalling}
-                    setInstalling={setSdkInstalling}
-                    errors={sdkErrors}
-                    setErrors={setSdkErrors}
-                  />
+                ? <SdkManager
+                  logs={logs}
+                  status={status}
+                  refreshStatus={refreshStatus}
+                  progress={sdkProgress}
+                  setProgress={setSdkProgress}
+                  installing={sdkInstalling}
+                  setInstalling={setSdkInstalling}
+                  errors={sdkErrors}
+                  setErrors={setSdkErrors}
+                />
                 : <div className="alert alert-warn flex items-center gap-2">
-                    <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-                    <span>Please install cmdline-tools first from the <strong>Setup</strong> page.</span>
-                  </div>
+                  <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                  <span>Please install cmdline-tools first from the <strong>Setup</strong> page.</span>
+                </div>
               }
             </div>
           )}
@@ -454,12 +548,12 @@ export default function App() {
                 </h1>
                 <p className="page-subtitle">{t('gpu_subtitle')}</p>
               </div>
-              <GpuSettings 
-                toast={toast} 
-                gpus={gpus} 
-                hypervisor={hypervisor} 
-                sysInfo={sysInfo} 
-                loading={loadingHardware} 
+              <GpuSettings
+                toast={toast}
+                gpus={gpus}
+                hypervisor={hypervisor}
+                sysInfo={sysInfo}
+                loading={loadingHardware}
                 onRescan={refreshHardware}
               />
             </div>
@@ -490,7 +584,9 @@ export default function App() {
                     size: '~180 MB',
                     installed: status?.jdk_installed,
                     onInstall: installJdk,
+                    onUninstall: uninstallJdk,
                     loading: installing.jdk,
+                    uninstalling: uninstalling.jdk,
                     requires: false,
                   },
                   {
@@ -500,7 +596,9 @@ export default function App() {
                     size: '~130 MB',
                     installed: status?.cmdline_installed,
                     onInstall: installCmdline,
+                    onUninstall: uninstallCmdline,
                     loading: installing.cmdline,
+                    uninstalling: uninstalling.cmdline,
                     requires: !status?.jdk_installed,
                   },
                   {
@@ -510,57 +608,96 @@ export default function App() {
                     size: '~300 MB',
                     installed: status?.emulator_installed,
                     onInstall: null,
+                    onUninstall: null,
+                    loading: false,
+                    uninstalling: false,
                     requires: false,
                   },
                 ].map(item => (
-                  <div key={item.key} className="card">
-                    <div className="flex items-center gap-3" style={{ marginBottom: 12 }}>
-                      <div className="stat-icon" style={{
-                        background: item.installed ? 'rgba(16,185,129,0.15)' : 'rgba(120,80,255,0.15)',
-                        width: 48, height: 48,
-                      }}>{item.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <div className="flex items-center gap-2">
-                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                            Step {item.step}: {item.title}
-                          </span>
+                  <div key={item.key} className={`setup-card ${item.installed ? 'installed' : ''} ${item.requires ? 'locked' : ''}`}>
+                    <div className="setup-card-main">
+                      <div className="setup-card-icon-container">
+                        <div className={`setup-card-icon ${item.installed ? 'installed' : 'pending'}`}>
+                          {item.icon}
+                        </div>
+                        <div className="setup-card-badge">STEP 0{item.step}</div>
+                      </div>
+
+                      <div className="setup-card-content">
+                        <div className="setup-card-header">
+                          <h3 className="setup-card-title">{item.title}</h3>
                           <StatusDot ok={item.installed} />
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{item.desc}</div>
-                        <div className="badge badge-gpu flex items-center gap-1" style={{ marginTop: 6 }}>
-                          <Package size={10} />
-                          {item.size}
+                        <p className="setup-card-desc">{item.desc}</p>
+                        <div className="setup-card-meta">
+                          <span className="setup-meta-badge">
+                            <Package size={11} />
+                            {item.size}
+                          </span>
                         </div>
                       </div>
-                      {item.onInstall && (
-                        <button
-                          className={`btn ${item.installed ? 'btn-ghost' : 'btn-primary'} btn-sm flex items-center gap-1`}
-                          onClick={item.onInstall}
-                          disabled={item.loading || item.requires || item.installed}
-                          id={`btn-install-${item.key}`}
-                        >
-                          {item.loading ? <><Spinner size={13} />Downloading…</> : item.installed ? 'Installed' : <><Download size={12} />Download & Install</>}
-                        </button>
-                      )}
-                      {!item.onInstall && !item.installed && (
-                        <button className="btn btn-ghost btn-sm" onClick={() => setPage('sdk')}>
-                          Go to SDK Manager →
-                        </button>
-                      )}
+
+                      <div className="setup-card-actions">
+                        {item.onInstall && (
+                          item.loading ? (
+                            <button
+                              className="btn-setup cancel has-tooltip"
+                              onClick={() => handleCancelDownload(item.key)}
+                              data-tooltip="Cancel download"
+                            >
+                              <X size={12} />Cancel
+                            </button>
+                          ) : item.uninstalling ? (
+                            <button
+                              className="btn-setup cancel"
+                              disabled
+                              style={{ opacity: 0.75, cursor: 'not-allowed' }}
+                            >
+                              <Spinner size={12} />Uninstalling…
+                            </button>
+                          ) : item.installed ? (
+                            item.onUninstall && (
+                              <button
+                                className="btn-setup cancel has-tooltip"
+                                onClick={item.onUninstall}
+                                data-tooltip="Uninstall component"
+                              >
+                                <Trash2 size={12} /> Uninstall
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              className={`btn-setup ${item.installed ? 'installed' : 'primary'}`}
+                              onClick={item.onInstall}
+                              disabled={item.requires || item.installed}
+                              id={`btn-install-${item.key}`}
+                            >
+                              {item.installed ? 'Installed' : <><Download size={12} />Install Now</>}
+                            </button>
+                          )
+                        )}
+                        {!item.onInstall && !item.installed && (
+                          <button className="btn-setup secondary" onClick={() => setPage('sdk')}>
+                            Go to SDK Manager →
+                          </button>
+                        )}
+                      </div>
                     </div>
+
                     {item.loading && progress[item.key] !== undefined && (
-                      <div>
-                        <div className="flex justify-between text-sm text-muted" style={{ marginBottom: 4 }}>
-                          <span>Downloading...</span>
+                      <div className="setup-card-progress">
+                        <div className="progress-labels">
+                          <span>Downloading files...</span>
                           <span>{progress[item.key]}%</span>
                         </div>
                         <ProgressBar value={progress[item.key]} />
                       </div>
                     )}
+
                     {item.requires && (
-                      <div className="alert alert-warn mt-2 flex items-center gap-2" style={{ fontSize: 12 }}>
+                      <div className="setup-card-lock-msg">
                         <AlertTriangle size={12} style={{ flexShrink: 0 }} />
-                        <span>Requires Step {item.step - 1} to be installed first.</span>
+                        <span>Requires OpenJDK 21 (Step {item.step - 1}) to be installed first.</span>
                       </div>
                     )}
                   </div>
@@ -578,7 +715,7 @@ export default function App() {
 
           {/* ─── Settings Page ─── */}
           {page === 'settings' && (
-            <Settings 
+            <Settings
               toast={toast}
             />
           )}
@@ -689,6 +826,7 @@ export default function App() {
         />
       )}
       <ToastContainer toasts={toasts} />
+      {confirmDialog}
     </div>
   )
 }

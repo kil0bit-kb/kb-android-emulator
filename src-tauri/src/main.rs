@@ -73,8 +73,11 @@ fn main() {
             commands::window::window_maximize,
             commands::window::window_close,
             commands::install::fetch_sdk_packages,
+            commands::install::cancel_download,
             commands::avd::update_avd_config,
             commands::launch::optimize_guest_apps,
+            commands::install::uninstall_jdk,
+            commands::install::uninstall_cmdline_tools,
             commands::window::get_app_version,
         ])
         .build(tauri::generate_context!())

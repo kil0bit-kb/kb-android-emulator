@@ -139,7 +139,7 @@ export function GpuSettings({ toast, gpus, hypervisor, sysInfo, loading, onResca
     { val: 'whpx', label: 'WHPX (Windows Hypervisor Platform) - Recommended', desc: 'Best performance. Fully compatible with WSL2, Hyper-V, Docker, and VirtualBox.' },
     { val: 'aehd', label: 'AEHD (Android Emulator Hypervisor Driver)', desc: "Google's lightweight standalone driver. Works on Intel/AMD. (Must disable Hyper-V to run AEHD)." },
     { val: 'haxm', label: 'Intel HAXM (Legacy)', desc: "Intel's hardware acceleration driver. Works on Intel CPUs only (Deprecated)." },
-    { val: 'off',  label: 'Off (No Virtualization)', desc: 'Extremely slow! Emulates CPU in software. Use only for diagnostic troubleshooting.' },
+    { val: 'off', label: 'Off (No Virtualization)', desc: 'Extremely slow! Emulates CPU in software. Use only for diagnostic troubleshooting.' },
   ]
 
   const GPU_MODES = [
@@ -187,7 +187,7 @@ export function GpuSettings({ toast, gpus, hypervisor, sysInfo, loading, onResca
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {ACCEL_OPTIONS.map(opt => (
-            <label key={opt.val} className={`gpu-card ${selectedAccel === opt.val ? 'selected' : ''}`} style={{ cursor: 'pointer' }} onClick={() => handleAccelChange(opt.val)}>
+            <label key={opt.val} className={`gpu-card ${selectedAccel === opt.val ? 'selected' : ''}`} style={{ cursor: 'pointer' }}>
               <input type="radio" name="accel" checked={selectedAccel === opt.val} onChange={() => handleAccelChange(opt.val)} style={{ accentColor: '#7c3aed' }} />
               <div>
                 <div className="gpu-name">{opt.label}</div>
@@ -215,7 +215,7 @@ export function GpuSettings({ toast, gpus, hypervisor, sysInfo, loading, onResca
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {GPU_MODES.map(opt => (
-            <label key={opt.val} className={`gpu-card ${selectedGpuMode === opt.val ? 'selected' : ''}`} style={{ cursor: 'pointer' }} onClick={() => handleGpuModeChange(opt.val)}>
+            <label key={opt.val} className={`gpu-card ${selectedGpuMode === opt.val ? 'selected' : ''}`} style={{ cursor: 'pointer' }}>
               <input type="radio" name="gpu_mode" checked={selectedGpuMode === opt.val} onChange={() => handleGpuModeChange(opt.val)} style={{ accentColor: '#7c3aed' }} />
               <div>
                 <div className="gpu-name">{opt.label}</div>
@@ -358,7 +358,7 @@ export function GpuSettings({ toast, gpus, hypervisor, sysInfo, loading, onResca
                 <label className="form-label">Windows Registry GPU Preference Mode</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {GPU_PREFS.map(p => (
-                    <label key={p.val} className="gpu-card" style={{ cursor: 'pointer' }} onClick={() => setPreference(p.val)}>
+                    <label key={p.val} className="gpu-card" style={{ cursor: 'pointer' }}>
                       <input type="radio" name="win_gpu_pref" checked={preference === p.val} onChange={() => setPreference(p.val)} style={{ accentColor: '#7c3aed' }} />
                       <div>
                         <div className="gpu-name">{p.label}</div>

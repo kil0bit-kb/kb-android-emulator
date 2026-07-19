@@ -26,9 +26,16 @@ dist-ssr
 # Android SDK and Emulator files
 android-sdk/
 
+# Rust/Cargo build artifacts
+target/
+src-tauri/target/
+
 # Local AI agent workspace logs/temp configs
 .gemini/
 .agents/
 
 .vscode
-.cargo
+
+# Windows-only Cargo target-dir override (space-free path workaround)
+# See .cargo/config.toml.example for setup instructions
+.cargo/config.toml

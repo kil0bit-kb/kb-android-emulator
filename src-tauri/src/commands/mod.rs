@@ -21,6 +21,19 @@ pub mod window;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+// ─── Download cancellation flag ───────────────────────────────────────────────
+/// Set to true by cancel_download command; checked inside download loops.
+pub static DOWNLOAD_CANCELLED: AtomicBool = AtomicBool::new(false);
+
+pub fn set_download_cancelled(v: bool) {
+    DOWNLOAD_CANCELLED.store(v, Ordering::Relaxed);
+}
+
+pub fn is_download_cancelled() -> bool {
+    DOWNLOAD_CANCELLED.load(Ordering::Relaxed)
+}
 
 // ─── Shared global state ──────────────────────────────────────────────────────
 pub static RUNNING_AVDS: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
