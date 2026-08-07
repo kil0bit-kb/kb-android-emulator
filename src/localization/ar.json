@@ -1,0 +1,54 @@
+{
+  "lang_name": "العربية",
+  "nav_devices": "أجهزتي",
+  "nav_sdk": "مدير SDK",
+  "nav_gpu": "الرسوميات والأداء",
+  "nav_setup": "الإعداد / التثبيت",
+  "nav_settings": "الإعدادات",
+  "nav_logs": "سجل النظام",
+
+  "devices_title": "أجهزتي",
+  "devices_subtitle": "أنشئ وأدر أجهزة أندرويد الافتراضية",
+  "devices_refresh": "تحديث",
+  "devices_optimize": "تحسين الألعاب",
+  "devices_new": "جهاز جديد",
+  "devices_empty_title": "لا توجد أجهزة بعد",
+  "devices_empty_desc": "أنشئ أول جهاز أندرويد افتراضي. تأكد من تثبيت جميع مكونات SDK أولاً.",
+  "devices_create_first": "إنشاء أول جهاز",
+
+  "sdk_title": "مدير SDK",
+  "sdk_subtitle": "ثبّت صور نظام أندرويد، والمحاكي، وأدوات المنصة",
+
+  "gpu_title": "الرسوميات والأداء",
+  "gpu_subtitle": "اضبط تسريع الرسوميات والمحاكاة الافتراضية للحصول على أفضل أداء",
+
+  "setup_title": "الإعداد والتثبيت",
+  "setup_subtitle": "نزّل المكونات المطلوبة لتشغيل محاكي أندرويد",
+  "setup_warn": "تُنزَّل جميع المكونات من خوادم Google وEclipse Temurin الرسمية، وتُحفَظ محليًا داخل android-sdk/ دون تثبيت على مستوى النظام.",
+
+  "settings_title": "الإعدادات",
+  "settings_subtitle": "إدارة اللغة وخيارات الواجهة والإعدادات الافتراضية للمحاكي",
+  "settings_section_interface": "إعدادات الواجهة",
+  "settings_lang_label": "اللغة",
+  "settings_section_defaults": "الإعدادات الافتراضية للمحاكي",
+  "settings_accel_label": "المسرّع الافتراضي",
+  "settings_gpu_label": "وضع الرسوميات الافتراضي",
+  "settings_quickboot_label": "الإقلاع السريع الافتراضي",
+  "settings_bootanim_label": "رسوم الإقلاع الافتراضية",
+  "settings_logcapture_label": "التقاط السجل افتراضيًا",
+  "settings_logcapture_desc": "التقاط سجل وحدة تحكم النظام الضيف تلقائيًا عند الإقلاع",
+  "settings_save_btn": "حفظ الإعدادات",
+
+  "logs_title": "سجل النظام",
+  "logs_subtitle": "المخرجات المباشرة من عمليات SDK والمحاكيات",
+  "logs_clear": "مسح",
+  "logs_capture_title": "التقاط سجل المحاكي",
+  "logs_paused_warn": "تم إيقاف التقاط السجل مؤقتًا. يتم تجاهل مخرجات المحاكي الجديدة. انقر على «متوقف مؤقتًا» للاستئناف.",
+  "logs_empty": "لا توجد مخرجات سجل للمحاكي حتى الآن. شغّل جهازًا لعرض السجل هنا.",
+
+  "ready": "جاهز",
+  "setup_required": "الإعداد مطلوب",
+  "running": "قيد التشغيل",
+  "on": "تشغيل",
+  "off": "إيقاف"
+}
