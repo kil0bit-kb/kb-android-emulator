@@ -42,6 +42,12 @@ export default function App() {
 
   const { t, i18n } = useTranslation()
 
+  useEffect(() => {
+  const html = document.documentElement
+  html.dir = i18n.dir()
+  html.lang = i18n.language
+}, [i18n.language])
+
   const changeLang = (newLang) => {
     i18n.changeLanguage(newLang)
     localStorage.setItem('app_lang', newLang)

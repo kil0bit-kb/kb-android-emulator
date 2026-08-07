@@ -1,0 +1,54 @@
+{
+  "lang_name": "Français (France)",
+  "nav_devices": "Mes appareils",
+  "nav_sdk": "Gestionnaire SDK",
+  "nav_gpu": "GPU et performances",
+  "nav_setup": "Configuration / Installation",
+  "nav_settings": "Paramètres",
+  "nav_logs": "Journaux de la console",
+  
+  "devices_title": "Mes appareils",
+  "devices_subtitle": "Créer et gérer des appareils virtuels Android",
+  "devices_refresh": "Actualiser",
+  "devices_optimize": "Optimiser les jeux",
+  "devices_new": "Nouvel appareil",
+  "devices_empty_title": "Aucun appareil pour le moment",
+  "devices_empty_desc": "Créez votre premier appareil virtuel Android. Assurez-vous d'abord que tous les composants SDK sont installés.",
+  "devices_create_first": "Créer le premier appareil",
+  
+  "sdk_title": "Gestionnaire SDK",
+  "sdk_subtitle": "Installer les images système Android, l'émulateur et les outils de plateforme",
+  
+  "gpu_title": "GPU et performances",
+  "gpu_subtitle": "Configurer l'accélération GPU et la virtualisation pour des performances maximales",
+  
+  "setup_title": "Configuration et installation",
+  "setup_subtitle": "Télécharger les composants nécessaires pour exécuter l'émulateur Android",
+  "setup_warn": "Tous les composants sont téléchargés depuis les serveurs officiels de Google et Eclipse Temurin. Ils sont stockés localement dans android-sdk/ — aucune installation globale.",
+  
+  "settings_title": "Paramètres",
+  "settings_subtitle": "Gérer la langue, les options de l'interface et les paramètres par défaut de l'émulateur",
+  "settings_section_interface": "Paramètres de l'interface",
+  "settings_lang_label": "Langue",
+  "settings_section_defaults": "Options par défaut de l'émulateur",
+  "settings_accel_label": "Accélérateur par défaut",
+  "settings_gpu_label": "Mode GPU par défaut",
+  "settings_quickboot_label": "Démarrage rapide par défaut",
+  "settings_bootanim_label": "Animation de démarrage par défaut",
+  "settings_logcapture_label": "Capture des journaux par défaut",
+  "settings_logcapture_desc": "Capturer automatiquement les journaux de la console invitée au démarrage",
+  "settings_save_btn": "Enregistrer les paramètres",
+  
+  "logs_title": "Journaux de la console",
+  "logs_subtitle": "Sortie en direct des opérations SDK et des émulateurs",
+  "logs_clear": "Effacer",
+  "logs_capture_title": "Capture des journaux de l'émulateur",
+  "logs_paused_warn": "La capture des journaux est en pause. Les nouvelles sorties de l'émulateur sont ignorées. Cliquez sur Pause pour reprendre.",
+  "logs_empty": "Aucune sortie de journal d'émulateur pour le moment. Lancez un appareil pour voir ses journaux ici.",
+  
+  "ready": "Prêt",
+  "setup_required": "Configuration requise",
+  "running": "En cours d'exécution",
+  "on": "ACTIVÉ",
+  "off": "DÉSACTIVÉ"
+}

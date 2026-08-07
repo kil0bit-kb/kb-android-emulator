@@ -1678,3 +1678,126 @@ input[type="range"]::-webkit-slider-thumb {
 .confirm-actions .btn {
   flex: 1;
 }
+
+
+/* ─────────────────────────────────────────────
+   RTL Support
+   ───────────────────────────────────────────── */
+
+html[dir="rtl"] {
+  direction: rtl;
+}
+
+html[dir="rtl"] body {
+  text-align: right;
+}
+
+/* Sidebar */
+
+html[dir="rtl"] .sidebar {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+/* Titlebar */
+
+html[dir="rtl"] .titlebar {
+  padding: 0 16px 0 0;
+}
+
+html[dir="rtl"] .titlebar-controls {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+/* Forms */
+
+html[dir="rtl"] .form-select {
+  background-position: left 12px center;
+  padding-right: 14px;
+  padding-left: 34px;
+}
+
+html[dir="rtl"] .custom-select-label {
+  text-align: right;
+}
+
+html[dir="rtl"] .custom-select-menu {
+  text-align: right;
+}
+
+html[dir="rtl"] .custom-select-option {
+  text-align: right;
+}
+
+/* Inputs */
+
+html[dir="rtl"] .form-input,
+html[dir="rtl"] .form-select {
+  text-align: right;
+}
+
+/* Cards */
+
+html[dir="rtl"] .device-actions,
+html[dir="rtl"] .setup-card-header,
+html[dir="rtl"] .setup-card-main,
+html[dir="rtl"] .gpu-card,
+html[dir="rtl"] .pkg-row,
+html[dir="rtl"] .stat-card,
+html[dir="rtl"] .toggle-wrap {
+  direction: rtl;
+}
+
+/* Device metadata */
+
+html[dir="rtl"] .device-meta {
+  direction: rtl;
+}
+
+/* Toast */
+
+html[dir="rtl"] .toast-container {
+  right: auto;
+  left: 16px;
+}
+
+@keyframes toastInRTL {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+html[dir="rtl"] .toast {
+  animation: toastInRTL .2s var(--ease);
+}
+
+/* Search */
+
+html[dir="rtl"] .search-input-wrapper {
+  direction: rtl;
+}
+
+/* Modal footer */
+
+html[dir="rtl"] .modal-footer,
+html[dir="rtl"] .confirm-actions {
+  flex-direction: row-reverse;
+}
+
+/* Toggle */
+
+html[dir="rtl"] .toggle::after {
+  left: auto;
+  right: 2px;
+}
+
+html[dir="rtl"] .toggle.on::after {
+  right: calc(100% - 14px);
+}
